@@ -1,13 +1,13 @@
-using System.Collections;
+ï»¿using System.Collections;
 using UnityEngine;
 
-// ¸ñÇ¥: ½Ç¸°´õÀÇ Rod¸¦ minRange¿¡¼­ maxRange·Î Æ¯Á¤ ¼Óµµ·Î ÀÌµ¿½ÃÅ²´Ù.
-// ¼Ó¼º: RodÀÇ transform, minRange, maxRange, ¼Óµµ
+// ëª©í‘œ: ì‹¤ë¦°ë”ì˜ Rodë¥¼ minRangeì—ì„œ maxRangeë¡œ íŠ¹ì • ì†ë„ë¡œ ì´ë™ì‹œí‚¨ë‹¤.
+// ì†ì„±: Rodì˜ transform, minRange, maxRange, ì†ë„
 public class Cylinder : MonoBehaviour
 {
     [SerializeField] Transform rod;
     [SerializeField] float minRange;
-    // Unity¿¡¼­ ÇÁ·ÎÆÛÆ¼´Â ÀÎ½ºÆåÅÍÃ¢¿¡ º¸ÀÌÁö ¾ÊÀ½.
+    // Unityì—ì„œ í”„ë¡œí¼í‹°ëŠ” ì¸ìŠ¤í™í„°ì°½ì— ë³´ì´ì§€ ì•ŠìŒ.
     public float MinRange { get => minRange; set => value = minRange; }
     [SerializeField] float maxRange;
     [SerializeField] float speed;
@@ -16,15 +16,72 @@ public class Cylinder : MonoBehaviour
     Color originLSColor;
     [SerializeField] bool isForwardSWON = false;
     [SerializeField] bool isBackSWON = true;
-    bool isForwarding = false; // Cylinder°¡ ¾ÕÂÊÀ¸·Î °¡°íÀÖÀ» ¶§ true
+    bool isForwarding = false; // Cylinderê°€ ì•ìª½ìœ¼ë¡œ ê°€ê³ ìˆì„ ë•Œ true
 
     private void Start()
     {
         originLSColor = forwardLS.material.color;
         backwardLS.material.color = Color.green;
+
+        // ì½”ë£¨í‹´ í•¨ìˆ˜ë¡œ PLCì—ì„œ ë“¤ì–´ì˜¤ëŠ” ì‹ í˜¸ë¥¼ ê³„ì†í™•ì¸, ONì‹ í˜¸ê°€ ë“¤ì–´ì˜¤ë©´ ì´ë™ì„ 1ë²ˆë§Œ ì‹¤í–‰
+        StartCoroutine(MoveForwardBySignal());
+        StartCoroutine(MoveBackwardBySignal());
     }
 
-    // CylinderForward ¹öÆ°À» ´©¸£¸é ½Ç¸°´õ°¡ ÀüÁøÇÑ´Ù.
+    public bool isForwardSignal; // SOL1 PLCë¡œ ë°›ì€ Xë””ë°”ì´ìŠ¤ ì •ë³´ë¥¼ ì €ì¥
+    public bool isBackwardSignal; // SOL2 
+    bool isFrontEnd = false; // ì‹¤ë¦°ë”ê°€ ì•ìª½ ëì— ìˆëŠ” ìƒíƒœë¥¼ í™•ì¸(falseë©´ ë’·ëì— ìˆëŠ” ìƒíƒœ)
+    IEnumerator MoveForwardBySignal()
+    {
+        while(true)
+        {
+            // ì–‘ë°©í–¥ ì†”ë ˆë…¸ì´ë“œëŠ” í•œìª½ì˜ ì‹œê·¸ë„ë¡œ ì‹¤ë¦°ë”ë¥¼ ì›€ì§ì¸ë‹¤.
+            yield return new WaitUntil(() =>  isForwardSignal && !isBackwardSignal && !isFrontEnd);
+
+            isForwarding = true;
+            print("ì „ì§„ì¤‘");
+
+            // ë’¤ìª½ ë¦¬ë¯¸íŠ¸ ìŠ¤ìœ„ì¹˜ëŠ” OFF
+            backwardLS.material.color = originLSColor;
+
+            // ë¯¸ë¦¬ ë°©í–¥ì„ ì •ì˜
+            Vector3 startPos = new Vector3(0, minRange, 0);
+            Vector3 endPos = new Vector3(0, maxRange, 0);
+
+            // ì´ë™ ì½”ë£¨í‹´ í•¨ìˆ˜
+            yield return CoMoveCylinder(startPos, endPos);
+
+            print("ì´ë™ì™„ë£Œ");
+        }
+    }
+
+    IEnumerator MoveBackwardBySignal()
+    {
+        while (true)
+        {
+            // ì–‘ë°©í–¥ ì†”ë ˆë…¸ì´ë“œëŠ” í•œìª½ì˜ ì‹œê·¸ë„ë¡œ ì‹¤ë¦°ë”ë¥¼ ì›€ì§ì¸ë‹¤.
+            yield return new WaitUntil(() => !isForwardSignal && isBackwardSignal && isFrontEnd);
+
+            isForwarding = false;
+            print("í›„ì§„ì¤‘");
+
+            // ì•ìª½ ë¦¬ë¯¸íŠ¸ ìŠ¤ìœ„ì¹˜ëŠ” OFF
+            forwardLS.material.color = originLSColor;
+
+            // ë¯¸ë¦¬ ë°©í–¥ì„ ì •ì˜
+            Vector3 startPos = new Vector3(0, minRange, 0);
+            Vector3 endPos = new Vector3(0, maxRange, 0);
+
+            // ì´ë™ ì½”ë£¨í‹´ í•¨ìˆ˜
+            yield return CoMoveCylinder(endPos, startPos);
+
+            print("ì´ë™ì™„ë£Œ");
+        }
+    }
+
+
+
+    // CylinderForward ë²„íŠ¼ì„ ëˆ„ë¥´ë©´ ì‹¤ë¦°ë”ê°€ ì „ì§„í•œë‹¤.
     public void OnCylinderForwardEvent()
     {
         Vector3 startPos = new Vector3(0, minRange, 0);
@@ -32,7 +89,7 @@ public class Cylinder : MonoBehaviour
 
         isBackSWON = false; 
 
-        isForwarding = true; // ¾ÕÀ¸·Î ÇâÇÏ±â ½ÃÀÛÇÒ ¶§(¾ÕÀ¸·Î ¿òÁ÷ÀÌ´Â Áß)
+        isForwarding = true; // ì•ìœ¼ë¡œ í–¥í•˜ê¸° ì‹œì‘í•  ë•Œ(ì•ìœ¼ë¡œ ì›€ì§ì´ëŠ” ì¤‘)
 
         StartCoroutine(CoMoveCylinder(startPos, endPos));
 
@@ -46,7 +103,7 @@ public class Cylinder : MonoBehaviour
 
         isForwardSWON = false;
 
-        isForwarding = false; // µÚ·Î ÇâÇÏ±â ½ÃÀÛÇÒ ¶§(µÚ·Î ¿òÁ÷ÀÌ´Â Áß)
+        isForwarding = false; // ë’¤ë¡œ í–¥í•˜ê¸° ì‹œì‘í•  ë•Œ(ë’¤ë¡œ ì›€ì§ì´ëŠ” ì¤‘)
 
         StartCoroutine(CoMoveCylinder(endPos, startPos));
 
@@ -63,15 +120,19 @@ public class Cylinder : MonoBehaviour
 
             if (distance < 0.1f)
             {
-                if (isForwarding) // ÀüÁø ½ÅÈ£¸¦ ¹Ş¾ÒÀ» ¶§
+                if (isForwarding) // ì „ì§„ ì‹ í˜¸ë¥¼ ë°›ì•˜ì„ ë•Œ
                 {
-                    isForwardSWON = true; // µµÂø½Ã Forward LimitSW ON
+                    isForwardSWON = true; // ë„ì°©ì‹œ Forward LimitSW ON
                     forwardLS.material.color = Color.green;
+
+                    isFrontEnd = true;
                 }
-                else if(!isForwarding) // ÈÄÁø ½ÅÈ£¸¦ ¹Ş¾ÒÀ» ¶§
+                else if(!isForwarding) // í›„ì§„ ì‹ í˜¸ë¥¼ ë°›ì•˜ì„ ë•Œ
                 { 
-                    isBackSWON = true;  // µµÂø½Ã Backward LimitSW ON
+                    isBackSWON = true;  // ë„ì°©ì‹œ Backward LimitSW ON
                     backwardLS.material.color = Color.green;
+
+                    isFrontEnd = false;
                 }
 
                 break;
