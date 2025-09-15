@@ -7,6 +7,9 @@ TagManager:
   - Wall
   - ball
   - GrabableObject
+  - Plastic
+  - Metal
+  - Dragger
   layers:
   - Default
   - TransparentFX
