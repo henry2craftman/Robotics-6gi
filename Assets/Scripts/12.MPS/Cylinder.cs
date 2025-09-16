@@ -16,8 +16,8 @@ public class Cylinder : MonoBehaviour
     [SerializeField] Renderer forwardLS;
     [SerializeField] Renderer backwardLS;
     Color originLSColor;
-    [SerializeField] bool isForwardSWON = false;
-    [SerializeField] bool isBackwardSWON = true;
+    public bool isForwardSWON = false;
+    public bool isBackwardSWON = true;
     bool isForwarding = false;
 
     private void Start()
@@ -44,6 +44,8 @@ public class Cylinder : MonoBehaviour
             yield return new WaitUntil(() => isForwardSignal && !isBackwardSignal&& !isFrontEnd);
 
             isForwarding = true;
+            isBackwardSWON = false;
+
             print("전진중");
             //뒤쪽 리밋 스위치 꺼짐
             backwardLS.material.color = originLSColor;
@@ -66,6 +68,8 @@ public class Cylinder : MonoBehaviour
             yield return new WaitUntil(() => isBackwardSignal && !isForwardSignal && isFrontEnd);
 
             isForwarding = false;
+            isForwardSWON = false;
+
             print("후진중");
             //앞쪽 리밋 스위치 꺼짐
             forwardLS.material.color = originLSColor;

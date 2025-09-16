@@ -4,21 +4,36 @@ using UnityEngine;
 
 namespace MPS
 {
+    using UnityEngine;
+
     public class Loader : MonoBehaviour
     {
         [SerializeField] GameObject[] objPrefabs;
+        public bool isLoadedSignal = false;
 
-
-        public bool isLoadSignal = false;
-
-        // Start is called once before the first execution of Update after the MonoBehaviour is created
         public void OnLoadBtnClkEvent()
         {
             int rand = Random.Range(0, objPrefabs.Length);
+
             GameObject obj = Instantiate(objPrefabs[rand]);
+
             obj.transform.position = transform.position;
-            obj.AddComponent<Rigidbody>();
         }
 
+        private void OnTriggerEnter(Collider other)
+        {
+            if (other.tag == "Metal" || other.tag == "Plastic")
+            {
+                isLoadedSignal = true;
+            }
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
+            if (other.tag == "Metal" || other.tag == "Plastic")
+            {
+                isLoadedSignal = false;
+            }
+        }
     }
 }

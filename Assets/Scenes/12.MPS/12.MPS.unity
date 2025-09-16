@@ -11608,6 +11608,11 @@ MonoBehaviour:
   - {fileID: 1529072707}
   - {fileID: 1810892939}
   - {fileID: 1422599437}
+  conveyor: {fileID: 17390593}
+  towerLamp: {fileID: 1691143174}
+  pSensor: {fileID: 1442476978}
+  mSensor: {fileID: 427896903}
+  loader: {fileID: 1140743885}
 --- !u!4 &1397169033
 Transform:
   m_ObjectHideFlags: 0
