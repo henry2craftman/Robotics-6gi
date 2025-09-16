@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 
 // 목표: 실린더의 Rod를 minRange에서 maxRange로 특정 속도로 이동시킨다.
@@ -14,8 +14,8 @@ public class Cylinder : MonoBehaviour
     [SerializeField] Renderer forwardLS;
     [SerializeField] Renderer backwardLS;
     Color originLSColor;
-    [SerializeField] bool isForwardSWON = false;
-    [SerializeField] bool isBackSWON = true;
+    public bool isForwardSWON = false;
+    public bool isBackSWON = true;
     bool isForwarding = false; // Cylinder가 앞쪽으로 가고있을 때 true
 
     private void Start()
