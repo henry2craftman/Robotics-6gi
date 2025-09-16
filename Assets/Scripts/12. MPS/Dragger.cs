@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using UnityEngine;
 
 namespace MPS
@@ -22,6 +22,12 @@ namespace MPS
         {
             while (true)
             {
+                if (!Conveyor.Instance.isConvOnOffSignal)
+                {
+                    yield return new WaitForEndOfFrame();
+                    continue;
+                }
+
                 if (Conveyor.Instance.isCWSignal)
                 {
                     Vector3 dir = Conveyor.Instance.endPos.position - transform.position;

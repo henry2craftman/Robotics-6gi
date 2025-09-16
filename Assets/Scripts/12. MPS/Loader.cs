@@ -16,7 +16,7 @@ public class Loader : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if(other.tag == "Metal" || other.tag == "Plastic")
+        //if(other.tag == "Metal" || other.tag == "Plastic")
         {
             isLoadedSignal = true;
         }
@@ -24,7 +24,7 @@ public class Loader : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.tag == "Metal" || other.tag == "Plastic")
+        //if (other.tag == "Metal" || other.tag == "Plastic")
         {
             isLoadedSignal = false;
         }

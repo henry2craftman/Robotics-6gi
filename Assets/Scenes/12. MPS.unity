@@ -11361,6 +11361,11 @@ MonoBehaviour:
   - {fileID: 88859430}
   - {fileID: 851273147}
   - {fileID: 1343862384}
+  conveyor: {fileID: 1544066086}
+  towerLamp: {fileID: 889294487}
+  pSensor: {fileID: 70097100}
+  mSensor: {fileID: 2009954374}
+  loader: {fileID: 1775571333}
 --- !u!4 &1721737822
 Transform:
   m_ObjectHideFlags: 0
@@ -11619,7 +11624,7 @@ Transform:
   m_GameObject: {fileID: 1775571331}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.373, y: 5, z: 0}
+  m_LocalPosition: {x: 3.32, y: 5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -13952,8 +13957,8 @@ SceneRoots:
   - {fileID: 543791367}
   - {fileID: 1544066085}
   - {fileID: 105486668}
-  - {fileID: 2009954373}
   - {fileID: 70097099}
+  - {fileID: 2009954373}
   - {fileID: 8754389186349960818}
   - {fileID: 4775363705709834280}
   - {fileID: 1775571332}
