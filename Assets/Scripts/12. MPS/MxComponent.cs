@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
+using System.Text;
 
 // 목표: UI(연결, 연결해지)버튼을 누르면 실시간으로 PLC에 데이터를 요청하고, 쓴다.
 // 속성: mxComponent 객체변수, 요청하는 기능, 쓰기 기능
@@ -43,6 +44,7 @@ public class MxComponent : MonoBehaviour
     public MPS.Sensor mSensor; // Metal Sensor
     public Loader loader; // 물체 로딩하는 기능 + 센서기능
 
+    StringBuilder sb = new StringBuilder(); // 문자열을 만들때 사용되는 최적화 클래스
 
     // Lifecycle 함수 중 가장 빨리 실행.
     private void Awake()
@@ -103,7 +105,9 @@ public class MxComponent : MonoBehaviour
     {
         while (isConnected)
         {
-            ReadDeviceBlock(xInputStartDevice, xInputBlockCount);
+            ReadDeviceBlock(yOutputStartDevice, yOutputBlockCount);
+
+            WriteDeviceBlock(xInputStartDevice, xInputBlockCount);
 
             yield return new WaitForSeconds(updateInterval);
         }
@@ -153,7 +157,7 @@ public class MxComponent : MonoBehaviour
             towerLamp.isRedSignal = yOutput[0][11];  // X0B
             towerLamp.isYellowSignal = yOutput[0][12];  // X0C
             towerLamp.isGreenSignal = yOutput[0][13];  // X0D
-            loader.isLoadedSignal = yOutput[0][14];  // X0E 
+            //loader.isLoadedSignal = yOutput[0][14];  // X0E 
         }
     }
 
@@ -181,11 +185,11 @@ public class MxComponent : MonoBehaviour
                                 $"{limitSW5}{limitSW6}{limitSW7}{pSensorValue}" +
                                 $"{mSensorValue}{loaderSensorValue}";
 
-        totalBinaryStr.Reverse();
+        totalBinaryStr = new string(totalBinaryStr.Reverse().ToArray());
 
         // 문자열 -> int로
         // 0000 0010 -> 2
-        int decimalX = Convert.ToInt32(totalBinaryStr);
+        int decimalX = Convert.ToInt32(totalBinaryStr, 2);
         data[0] = decimalX;
 
         mxComponent.WriteDeviceBlock(_xInputStartDevice, _xInputBlockCount, ref data[0]);

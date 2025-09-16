@@ -39,6 +39,7 @@ public class Cylinder : MonoBehaviour
             yield return new WaitUntil(() =>  isForwardSignal && !isBackwardSignal && !isFrontEnd);
 
             isForwarding = true;
+            isBackSWON = false;
             print("전진중");
 
             // 뒤쪽 리미트 스위치는 OFF
@@ -63,6 +64,7 @@ public class Cylinder : MonoBehaviour
             yield return new WaitUntil(() => !isForwardSignal && isBackwardSignal && isFrontEnd);
 
             isForwarding = false;
+            isForwardSWON = false;
             print("후진중");
 
             // 앞쪽 리미트 스위치는 OFF
