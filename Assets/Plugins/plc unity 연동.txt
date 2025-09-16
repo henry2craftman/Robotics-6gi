@@ -1,0 +1,5 @@
+gx works 와 연동하는 코드에 actutltype64 library를 참조 추가한 후
+unity Assets 폴더에 Plugins 폴더를 새로 만든 후
+Plugins 폴더에 Interop.ActUtlType64Lib.dll 파일을 넣어준다.
+Interop.ActUtlType64Lib.dll 파일 위치는
+코드 작성한 폴더에서 obj\Debug\net8.0-windows 안에 있음.
