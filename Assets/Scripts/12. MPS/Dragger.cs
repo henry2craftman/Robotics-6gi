@@ -12,12 +12,6 @@ namespace MPS
             StartCoroutine(CoMove());
         }
 
-        // Update is called once per frame
-        void Update()
-        {
-        
-        }
-
         IEnumerator CoMove()
         {
             while (true)
@@ -55,7 +49,7 @@ namespace MPS
                     transform.position += dir.normalized * Conveyor.Instance.speed * Time.deltaTime;
                 }
 
-                yield return new WaitForEndOfFrame();
+                yield return new WaitForSeconds(0.01f);
             }
         }
 
