@@ -14,6 +14,7 @@ namespace MPS
         public bool isConvOnOffSignal = false;
         public bool isCWSignal = false; // 정방향 신호
         public bool isCCWSignal = false; // 역방방향 신호
+        public bool isConStopSignal = false; // 켜지면 Conveyor stop
         public float speed;
         public Transform startPos;
         public Transform endPos;

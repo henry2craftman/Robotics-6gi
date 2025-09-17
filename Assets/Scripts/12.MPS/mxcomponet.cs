@@ -108,7 +108,7 @@ public class mxcomponet : MonoBehaviour
     }
 
 
-    // Y(output 신호) : Sol 신호(Y0~Y7), Conveyor 신호(Y8(on/ off), Y9(CW), Y0A(CCW)), TowerLamp 신호(Y0B(red), Y0C(yellow), Y0D(green)), Loader 신호(Y0E)
+    // Y(output 신호) : Sol 신호(Y0~Y7), Conveyor 신호(Y8(on/ off), Y9(CW), Y0A(CCW), Y0B(STOP)), TowerLamp 신호(Y0C(red), Y0D(yellow), Y0E(green)), Loader 신호(Y0E)
     private void ReadDeviceBlock(string _yOutputStartDevice, int _yOutputBlockCount)
     {
         // 10진수 -> 2진수 변환
@@ -144,9 +144,10 @@ public class mxcomponet : MonoBehaviour
             conveyor.isConvOnOffSignal = yOutputs[0][8];    // X8
             conveyor.isCWSignal = yOutputs[0][9];           // X9
             conveyor.isCCWSignal = yOutputs[0][10];         // X0A
-            towerLamp.isRedSignal = yOutputs[0][11];        // X0B
-            towerLamp.isYelSignal = yOutputs[0][12];        // X0C
-            towerLamp.isGrnSignal = yOutputs[0][13];        // X0D
+            conveyor.isCCWSignal = yOutputs[0][11];         // X0A
+            towerLamp.isRedSignal = yOutputs[0][12];        // X0B
+            towerLamp.isYelSignal = yOutputs[0][13];        // X0C
+            towerLamp.isGrnSignal = yOutputs[0][14];        // X0D
             // loader.isLoadedSignal = yOutputs[0][14];        // X0E
         }
     }

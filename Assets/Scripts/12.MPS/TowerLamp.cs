@@ -18,22 +18,34 @@ public class TowerLamp : MonoBehaviour
         if (render == null) return;
 
         var mat = render.material;
-        
-        // URP Lit: _Surface 0=Opaque, 1=Transparent
-        mat.SetInt("_Surface", makeOpaque ? 0 : 1);
-
-        CoreUtils.SetKeyword(mat, "_SURFACE_TYPE_TRANSPARENT", !makeOpaque);
-        CoreUtils.SetKeyword(mat, "_SURFACE_TYPE_OPAQUE", makeOpaque);
+        if (!mat) return;
 
         if (makeOpaque)
         {
+            mat.SetFloat("_Surface", 0f);
             mat.SetOverrideTag("RenderType", "Opaque");
             mat.renderQueue = (int)RenderQueue.Geometry;
+
+            mat.SetInt("_ZWrite", 1);
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.DisableKeyword("_ALPHABLEND_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.DisableKeyword("_SURFACE_TYPE_TRANSPARENT"); // 일부 URP 버전 대비
+            mat.SetFloat("_Blend", 0f);
+            mat.SetFloat("_AlphaClip", 0f);
         }
         else
         {
+            mat.SetFloat("_Surface", 1f);
             mat.SetOverrideTag("RenderType", "Transparent");
             mat.renderQueue = (int)RenderQueue.Transparent;
+
+            mat.SetInt("_ZWrite", 0);
+            mat.EnableKeyword("_ALPHABLEND_ON");            // 기본 알파 블렌딩
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.SetFloat("_Blend", 0f);
         }
         
     }
