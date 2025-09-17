@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
 using System.Text;
+using System.Diagnostics;
+using Debug = UnityEngine.Debug;
+using System.Threading.Tasks;
 
 // 목표: UI(연결, 연결해지)버튼을 누르면 실시간으로 PLC에 데이터를 요청하고, 쓴다.
 // 속성: mxComponent 객체변수, 요청하는 기능, 쓰기 기능
@@ -20,11 +23,14 @@ using System.Text;
 // - loader 신호(Y0E)
 public class MxComponent : MonoBehaviour
 {
+    // COM참조 추가 DLL추가(STA) -> 생성된 스레드와 동일한 스레드에서만 메서드를 호출이 가능(STA: 단일 스레드 어파트먼트)
     ActUtlType64 mxComponent;
 
     [Header("PLC 정보")]
     public bool isConnected = false;
-    public List<bool[]> yOutput;
+    [Tooltip("에러메시지가 표시됩니다.")]
+    public int iRet = 0;
+    List<bool[]> yOutput;
     public float updateInterval = 1f;
     public string xInputStartDevice = "X0";
     public int xInputBlockCount = 1;
@@ -44,30 +50,16 @@ public class MxComponent : MonoBehaviour
     public MPS.Sensor mSensor; // Metal Sensor
     public Loader loader; // 물체 로딩하는 기능 + 센서기능
 
+    Stopwatch stopwatch = new Stopwatch(); // 스탑워치 인스턴스
     StringBuilder sb = new StringBuilder(); // 문자열을 만들때 사용되는 최적화 클래스
-
-    // Lifecycle 함수 중 가장 빨리 실행.
-    private void Awake()
-    {
-        mxComponent = new ActUtlType64();
-        mxComponent.ActLogicalStationNumber = 0; // default: 0
-    }
 
     public void OnOpenBtnClkEvent()
     {
-        int iRet = mxComponent.Open();
-
-        if( iRet != 0 )
-        {
-            string error = Convert.ToString( iRet, 16 );
-            Debug.LogWarning( error );
-
-            return;
-        }
-
         isConnected = true;
 
-        StartCoroutine(CoUpdatePLCData());
+        Task.Run(UpdatePLCDataAsync);
+
+        StartCoroutine(CoShowErrMsg());
 
         Debug.Log("PLC가 연결되었습니다.");
     }
@@ -81,46 +73,48 @@ public class MxComponent : MonoBehaviour
             return;
         }
 
-        int iRet = mxComponent.Close();
-
-        if (iRet != 0)
-        {
-            string error = Convert.ToString(iRet, 16);
-            Debug.LogWarning(error);
-
-            return;
-        }
-
         isConnected = false;
 
         Debug.Log("PLC연결이 해지되었습니다.");
     }
 
-    private void Test()
+    // 서브 스레드에서 PLC 데이터 업데이트
+    async void UpdatePLCDataAsync()
     {
-        ReadDeviceBlock(xInputStartDevice, xInputBlockCount);
+        mxComponent = new ActUtlType64();
+        mxComponent.ActLogicalStationNumber = 0;
+
+        iRet = mxComponent.Open();
+
+        while (isConnected)
+        {
+            ReadDeviceBlock(mxComponent, yOutputStartDevice, yOutputBlockCount);
+
+            WriteDeviceBlock(mxComponent, xInputStartDevice, xInputBlockCount);
+
+            int interval = Convert.ToInt32(updateInterval);
+            await Task.Delay(interval);
+        }
+
+        iRet = mxComponent.Close();
     }
 
-    IEnumerator CoUpdatePLCData()
+    IEnumerator CoShowErrMsg()
     {
         while (isConnected)
         {
-            ReadDeviceBlock(yOutputStartDevice, yOutputBlockCount);
+            yield return new WaitUntil(() => iRet != 0);
 
-            WriteDeviceBlock(xInputStartDevice, xInputBlockCount);
-
-            yield return new WaitForSeconds(updateInterval);
+            CheckError(iRet);
         }
     }
 
-    private void ReadDeviceBlock(string _yInputStartDevice, int _yInputBlockCount)
+    private void ReadDeviceBlock(ActUtlType64 mxObject, string _yInputStartDevice, int _yInputBlockCount)
     {
         // 10진수 -> 2진수
         // { 33, 55, 500 } -> { 0011000000110000, 0011000000110000, 0011000000110000 }
         int[] data = new int[_yInputBlockCount];
-        int iRet = mxComponent.ReadDeviceBlock(_yInputStartDevice, _yInputBlockCount, out data[0]);
-
-        CheckError(iRet);
+        iRet = mxObject.ReadDeviceBlock(_yInputStartDevice, _yInputBlockCount, out data[0]);
 
         yOutput = new List<bool[]>();
         for (int i = 0; i < data.Length; i++)
@@ -133,35 +127,34 @@ public class MxComponent : MonoBehaviour
         yOutput = ConvertDecimalToBinary(data);
 
         ApplyOutputSignals(yOutput);
-
-        // 내부함수
-        void ApplyOutputSignals(List<bool[]> yOutput)
-        {
-            // 각 GameObject의 스크립트에 연결 (첫번째 블록의 각 비트의 작동여부 0 or 1)
-            // Y(output 신호, 1블록)
-            // - SOL 신호들(Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7)
-            // - Conveyor 신호들(Y8(on/off), Y9(cw), Y0A(ccw))
-            // - Towerlamp 신호들(Y0B(red), Y0C(yellow), Y0D(green))
-            // - loader 신호(Y0E)
-            cylinders[0].isForwardSignal = yOutput[0][0];   // X0
-            cylinders[0].isBackwardSignal = yOutput[0][1];   // X1
-            cylinders[1].isForwardSignal = yOutput[0][2];   // X2
-            cylinders[1].isBackwardSignal = yOutput[0][3];   // X3
-            cylinders[2].isForwardSignal = yOutput[0][4];   // X4
-            cylinders[2].isBackwardSignal = yOutput[0][5];   // X5
-            cylinders[3].isForwardSignal = yOutput[0][6];   // X6
-            cylinders[3].isBackwardSignal = yOutput[0][7];   // X7
-            conveyor.isConvOnOffSignal = yOutput[0][8];   // X8
-            conveyor.isCWSignal = yOutput[0][9];   // X9
-            conveyor.isCCWSignal = yOutput[0][10];  // X0A
-            towerLamp.isRedSignal = yOutput[0][11];  // X0B
-            towerLamp.isYellowSignal = yOutput[0][12];  // X0C
-            towerLamp.isGreenSignal = yOutput[0][13];  // X0D
-            //loader.isLoadedSignal = yOutput[0][14];  // X0E 
-        }
     }
 
-    private void WriteDeviceBlock(string _xInputStartDevice, int _xInputBlockCount)
+    void ApplyOutputSignals(List<bool[]> yOutput)
+    {
+        // 각 GameObject의 스크립트에 연결 (첫번째 블록의 각 비트의 작동여부 0 or 1)
+        // Y(output 신호, 1블록)
+        // - SOL 신호들(Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7)
+        // - Conveyor 신호들(Y8(on/off), Y9(cw), Y0A(ccw))
+        // - Towerlamp 신호들(Y0B(red), Y0C(yellow), Y0D(green))
+        // - loader 신호(Y0E)
+        cylinders[0].isForwardSignal = yOutput[0][0];   // X0
+        cylinders[0].isBackwardSignal = yOutput[0][1];   // X1
+        cylinders[1].isForwardSignal = yOutput[0][2];   // X2
+        cylinders[1].isBackwardSignal = yOutput[0][3];   // X3
+        cylinders[2].isForwardSignal = yOutput[0][4];   // X4
+        cylinders[2].isBackwardSignal = yOutput[0][5];   // X5
+        cylinders[3].isForwardSignal = yOutput[0][6];   // X6
+        cylinders[3].isBackwardSignal = yOutput[0][7];   // X7
+        conveyor.isConvOnOffSignal = yOutput[0][8];   // X8
+        conveyor.isCWSignal = yOutput[0][9];   // X9
+        conveyor.isCCWSignal = yOutput[0][10];  // X0A
+        towerLamp.isRedSignal = yOutput[0][11];  // X0B
+        towerLamp.isYellowSignal = yOutput[0][12];  // X0C
+        towerLamp.isGreenSignal = yOutput[0][13];  // X0D
+        //loader.isLoadedSignal = yOutput[0][14];  // X0E 
+    }
+
+    private void WriteDeviceBlock(ActUtlType64 mxObject, string _xInputStartDevice, int _xInputBlockCount)
     {
         int[] data = new int[_xInputBlockCount];
 
@@ -192,12 +185,11 @@ public class MxComponent : MonoBehaviour
         int decimalX = Convert.ToInt32(totalBinaryStr, 2);
         data[0] = decimalX;
 
-        mxComponent.WriteDeviceBlock(_xInputStartDevice, _xInputBlockCount, ref data[0]);
+        iRet = mxObject.WriteDeviceBlock(_xInputStartDevice, _xInputBlockCount, ref data[0]);
     }
 
 
     // WriteDeviceBlock(가상의 장비에 있는 X디바이스를 실제 센서로 가정하여 사용)
-
     // 10진수 -> 2진수 bool 배열로 변환하는 메서드
     private List<bool[]> ConvertDecimalToBinary(int[] data)
     {
