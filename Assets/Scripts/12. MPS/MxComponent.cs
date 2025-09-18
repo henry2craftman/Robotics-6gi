@@ -81,6 +81,7 @@ public class MxComponent : MonoBehaviour
     // 서브 스레드에서 PLC 데이터 업데이트
     async void UpdatePLCDataAsync()
     {
+        // Sub Thread에서 다시 인스턴싱
         mxComponent = new ActUtlType64();
         mxComponent.ActLogicalStationNumber = 0;
 
