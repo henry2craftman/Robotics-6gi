@@ -17,8 +17,8 @@ public class MutexStudy : MonoBehaviour
         Debug.Log("백그라운드에서 PLC Data 갱신을 시작합니다.");
         isConnected = true;
 
-        StartCoroutine(CoUpdate());
-        Task.Run(UpdatePLCDataAsync);
+        StartCoroutine(CoUpdate());     // 1. 메인스레드에서 값을 바꿈
+        Task.Run(UpdatePLCDataAsync);   // 2. sub스레드에서 값을 바꿈
     }
 
     // Update is called once per frame
@@ -42,6 +42,7 @@ public class MutexStudy : MonoBehaviour
         }
     }
 
+    // Task로 실행한 async/await에는 Unity관련 함수가 실행되지 않음(예. Random.Range, Debug.Log)
     async Task UpdatePLCDataAsync()
     {
         while(isConnected)

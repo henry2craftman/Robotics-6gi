@@ -37,7 +37,7 @@ public class mxcomponet : MonoBehaviour
     public MPS.Sensor mSensor;              // Metal Sensor
     public Loader loader;                   // 로딩하는 기능 + 센서기능
 
-    StringBuilder sb = new StringBuilder(); // 문자열을 만들대 사용되는 최적화 클래스
+    StringBuilder sb = new StringBuilder(); // 문자열을 만들때 사용되는 최적화 클래스
 
 
     // Lifecycle 함수 중 가장 빨리 실행.
