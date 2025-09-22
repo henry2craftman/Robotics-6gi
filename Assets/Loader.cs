@@ -32,7 +32,7 @@ public class Loader : MonoBehaviour
             int rand = Random.Range(0, objPrefabs.Length);
             GameObject obj = Instantiate(objPrefabs[rand]);
             obj.transform.position = transform.position;
-            yield return new WaitForSeconds(15);
+            yield return new WaitForSeconds(9);
 
         }
     }
