@@ -24,7 +24,12 @@ namespace MPS
         {
             while (true)
             {
-                if (Conveyor.Instance.isCWSignal)
+                if (!Conveyor.Instance.isConvOnOffSignal)
+                {
+                    yield return new WaitForEndOfFrame();
+                    continue;
+                }
+                else if (Conveyor.Instance.isCWSignal)
                 {
                     Vector3 dir = Conveyor.Instance.endPos.position - transform.position;
                     float distance = dir.magnitude;
@@ -50,9 +55,11 @@ namespace MPS
 
                     transform.position += dir.normalized * Conveyor.Instance.speed * Time.deltaTime;
                 }
-                yield return new WaitForEndOfFrame();
+                    yield return new WaitForEndOfFrame();
+                }
             }
-        }
+                
+        
         private void OnTriggerEnter(Collider other)
         {
             if (other.tag == "Plastic" || other.tag == "Metal")

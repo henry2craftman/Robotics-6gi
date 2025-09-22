@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Security.Cryptography.X509Certificates;
 using System.Transactions;
 using UnityEditor;
@@ -18,6 +19,23 @@ public class Loader : MonoBehaviour
         obj.transform.position = transform.position;
     }
 
+    private void Start()
+    {
+        StartCoroutine(CoRoof());
+    }
+
+    IEnumerator CoRoof()
+    {
+        while (true)
+        {
+
+            int rand = Random.Range(0, objPrefabs.Length);
+            GameObject obj = Instantiate(objPrefabs[rand]);
+            obj.transform.position = transform.position;
+            yield return new WaitForSeconds(15);
+
+        }
+    }
     private void OnTriggerEnter(Collider other)
     {
         if (other.tag == "Metal" || other.tag == "Plastic")

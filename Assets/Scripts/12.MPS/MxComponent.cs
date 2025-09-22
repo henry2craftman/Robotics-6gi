@@ -1,12 +1,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading.Tasks;
 using ActUtlType64Lib;
+using UnityEditor;
 using UnityEngine;
-using static UnityEditor.Rendering.CameraUI;
+using UnityEngine.PlayerLoop;
+using Debug = UnityEngine.Debug;
 
 // MxComponent의 목표: UI(연결, 연결해지)버튼을 누르면 실시간으로 PLC의 데이터를 요청하고 쓴다.
 // 속성 : mxComponent 객체(인터페이스)변수, 요청하는 기능, 쓰기 기능,  
@@ -17,10 +20,14 @@ using static UnityEditor.Rendering.CameraUI;
 
 public class MxComponent : MonoBehaviour
 {
+    // COM참조 추가 DLL추가(STA), 생성된 스레드와 동일한 스레드에서만 메서드를 호출이 가능(STA : 단일 스레드 어파트먼트 )
     ActUtlType64 mxComponent;
 
     [Header("PLC info")]
     public bool isConnected = false;
+    
+    public int iRet = 0;
+    List<bool[]> yOutputs;
     public float updateInterval = 1f;
     public string xInputStartDevice = "X0";
     public int xInputBlockCount = 1;
@@ -39,52 +46,56 @@ public class MxComponent : MonoBehaviour
     public MPS.Sensor mSensor; //Metal Sensor
     [Tooltip("LoaderSensor Connect Please")]
     public Loader loader;
+    
+    Stopwatch stopwatch = new Stopwatch();
 
     StringBuilder sb = new StringBuilder();
 
-    // 라이프 사이클 함수 중 가장 빨리 실행.
-    private void Awake()
-    {
-        mxComponent = new ActUtlType64();
-        mxComponent.ActLogicalStationNumber = 0;
-    }
-    private void Start()
-    {
-        OnOpenBtnClkEvent();
-        //Invoke("Test", 3); //3초마다 불러오게 했었다.
-
-    }
-
-    private void Test()
-    {
-        ReadDeviceBlock(xInputStartDevice, xInputBlockCount);
-    }
-
+    
     IEnumerator CoUpdatePLCData()
     {
-        while (true)
+        while (isConnected)
         {
-            ReadDeviceBlock(yOuputStartDevice, yOuputBlockCount);
-
-            WriteDeviceBlock(xInputStartDevice, xInputBlockCount);
+            stopwatch.Start();
+            //ReadDeviceBlock(yOuputStartDevice, yOuputBlockCount);
+            stopwatch.Stop();
+            Debug.Log("ReadDeviceBlock :" + stopwatch.ElapsedMilliseconds); // 1/1000 단위로 표시할 수 있는 명령어.
+           
+            stopwatch.Restart();
+            //WriteDeviceBlock(xInputStartDevice, xInputBlockCount);
+            stopwatch.Stop();
+            Debug.Log("WriteDeviceBlock :" + stopwatch.ElapsedMilliseconds);
 
             yield return new WaitForSeconds(updateInterval);
         }
     }
 
+
+    // 서브 스레드에서 PLC 데이터 업데이트 
+    async void UpdatePLCDataAsync()
+    {
+        mxComponent = new ActUtlType64();
+        mxComponent.ActLogicalStationNumber = 0;
+        mxComponent.Open();
+
+        while (isConnected)
+        {
+            //ReadDeviceBlock(yOuputStartDevice, yOuputBlockCount);
+            ReadDeviceBlock(mxComponent, "Y0", 1);
+            //WriteDeviceBlock(xInputStartDevice, xInputBlockCount);
+            
+            int interval = Convert.ToInt32(updateInterval);
+
+            await Task.Delay(interval);
+        }
+    }
+
     public void OnOpenBtnClkEvent()
     {
-        int iRet = mxComponent.Open();
-        if (iRet != 0)
-        {
-            string error = Convert.ToString(iRet, 16);
-            Debug.LogWarning(error);
-
-            return;
-        }
-
         isConnected = true;
-        StartCoroutine(CoUpdatePLCData());
+
+        Task.Run(UpdatePLCDataAsync);
+        //StartCoroutine(CoShowErrMsg());
         Debug.Log("PLC가 연결되었습니다.");
     }
     public void OnCloseBtnClkEvent()
@@ -108,16 +119,16 @@ public class MxComponent : MonoBehaviour
 
     }
 
-    private void ReadDeviceBlock(string _yOuputStartDevice, int _yOuputBlockCount)
+    private void ReadDeviceBlock(ActUtlType64 mxobj, string _yOuputStartDevice, int _yOuputBlockCount)
     {
         // {33,55,500} -> {0011000000011000.0011000000011000.0011000000011000} ... 
 
         int[] data = new int[_yOuputBlockCount];
-        int iRet = mxComponent.ReadDeviceBlock(_yOuputStartDevice, _yOuputBlockCount, out data[0]);
+        int iRet = mxobj.ReadDeviceBlock(_yOuputStartDevice, _yOuputBlockCount, out data[0]);
 
         CheckError(iRet);
 
-        List<bool[]> yOutputs = new List<bool[]>();
+        yOutputs = new List<bool[]>();
 
         bool[] block = new bool[16];
         for (int i = 0; i < data.Length; i++)
@@ -125,32 +136,34 @@ public class MxComponent : MonoBehaviour
             yOutputs.Add(block);
         }
         yOutputs = ConvertDecimalToBinary(data);
-
-        ApplyOutSignals(yOutputs);
-
-        void ApplyOutSignals(List<bool[]> yOutputs)
-        {
-            cylinders[0].isForwardSignal = yOutputs[0][0];  //X0
-            cylinders[0].isBackwardSignal = yOutputs[0][1]; //X1
-            cylinders[1].isForwardSignal = yOutputs[0][2];  //X2
-            cylinders[1].isBackwardSignal = yOutputs[0][3]; //X3
-            cylinders[2].isForwardSignal = yOutputs[0][4];  //X4
-            cylinders[2].isBackwardSignal = yOutputs[0][5]; //X5
-            cylinders[3].isForwardSignal = yOutputs[0][6];  //X6
-            cylinders[3].isBackwardSignal = yOutputs[0][7]; //X7
-
-            conveyor.isConvOnOffSignal = yOutputs[0][8];    //X8
-            conveyor.isCWSignal = yOutputs[0][9];           //X9
-            conveyor.isCCWSignal = yOutputs[0][10];        //X0a
-
-            towerLamp.isRedSignal = yOutputs[0][11];       //X0b
-            towerLamp.isYellowSignal = yOutputs[0][12];    //X0c
-            towerLamp.isGreenSignal = yOutputs[0][13];     //X0d
-
-            //loader.isLoadSignal = yOutputs[0][14];         //X0e
-        }
     }
+    private void Update()
+    {
+        ApplyOutSignals(yOutputs);
+    }
+    
 
+    void ApplyOutSignals(List<bool[]> yOutputs)
+    {
+        cylinders[0].isForwardSignal = yOutputs[0][0];  //X0
+        cylinders[0].isBackwardSignal = yOutputs[0][1]; //X1
+        cylinders[1].isForwardSignal = yOutputs[0][2];  //X2
+        cylinders[1].isBackwardSignal = yOutputs[0][3]; //X3
+        cylinders[2].isForwardSignal = yOutputs[0][4];  //X4
+        cylinders[2].isBackwardSignal = yOutputs[0][5]; //X5
+        cylinders[3].isForwardSignal = yOutputs[0][6];  //X6
+        cylinders[3].isBackwardSignal = yOutputs[0][7]; //X7
+
+        conveyor.isConvOnOffSignal = yOutputs[0][8];    //X8
+        conveyor.isCWSignal = yOutputs[0][9];           //X9
+        conveyor.isCCWSignal = yOutputs[0][10];        //X0a
+
+        towerLamp.isRedSignal = yOutputs[0][11];       //X0b
+        towerLamp.isYellowSignal = yOutputs[0][12];    //X0c
+        towerLamp.isGreenSignal = yOutputs[0][13];     //X0d
+
+        //loader.isLoadSignal = yOutputs[0][14];         //X0e
+    }
     // 실제 y신호들 연결
 
     // 10진수 -> 2진수 bool 배열로 변환하는 메서드

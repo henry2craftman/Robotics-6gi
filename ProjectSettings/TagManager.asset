@@ -10,6 +10,7 @@ TagManager:
   - Plastic
   - Metal
   - Dragger
+  - Palletizing
   layers:
   - Default
   - TransparentFX

@@ -1,0 +1,26 @@
+Y0	1SolF
+Y1	1SolB
+Y2	2SolF
+Y3	2SolB
+Y4	3SolF
+Y5	3SolB
+Y6	4SolF
+Y7	4SolB
+Y8	CovOnOff
+Y9	CovCW
+Y0A	CovCCW
+Y0B	LampR
+Y0C	LampY
+Y0D	LampG
+
+X0	LS1F
+X1	LS1B
+X2	LS2F
+X3	LS2B
+X4	LS3F
+X5	LS3B
+X6	LS4F
+X7	LS4B
+X8	근접센서
+X9	금속센서
+X0A	로드센서
