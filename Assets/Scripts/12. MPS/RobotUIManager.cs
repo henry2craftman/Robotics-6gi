@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using Unity.Mathematics;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 using static RobotUIManager;
@@ -12,6 +13,18 @@ using static RobotUIManager;
 // Step 정보 저장을 위한 기능(Step번호, 포지션, 로테이션, Duration, isSuctionOn)
 public class RobotUIManager : MonoBehaviour
 {
+    [Serializable]
+    public class RobotSequence
+    {
+        public List<List<Step>> sequenceList = new List<List<Step>>();
+
+        public void AddSequence(List<Step> steps)
+        {
+            sequenceList.Add(steps);
+        }
+    }
+    public RobotSequence robotSequence = new RobotSequence();
+
     [Serializable]
     public struct Step
     {
@@ -23,6 +36,7 @@ public class RobotUIManager : MonoBehaviour
     }
     public int repeatCount = 0;
     public List<Step> steps = new List<Step>();
+
 
     public bool isRobotOn = false;    // Power
     public bool isStarted = false;     // Start 버튼 클릭 여부
@@ -326,7 +340,7 @@ public class RobotUIManager : MonoBehaviour
     {
         isStarted = true;
 
-        StartCoroutine(CoSequenceMove());
+        StartCoroutine(CoTotalSequenceMove());
     }
 
     public void OnCycleBtnClkEvent()
@@ -345,6 +359,43 @@ public class RobotUIManager : MonoBehaviour
     {
         isEmergency = !isEmergency;
         Debug.LogWarning("긴급정지버튼 클릭: " + isEmergency);
+    }
+
+    public void OnClearBtnClkEvent()
+    {
+        steps.Clear();
+        Debug.Log("steps가 초기화 되었습니다.");
+    }
+
+    int sequenceCnt = 0;
+    public void OnSaveAsSequenceBtnClkEvent()
+    {
+        if (steps.Count > 0)
+        {
+            List<Step> newSteps = new List<Step>(steps);
+
+            if(sequenceCnt > 0)
+            {
+                List<Step> prevSeq = robotSequence.sequenceList[sequenceCnt - 1];
+                Step lastStep = prevSeq[prevSeq.Count - 1];
+                newSteps.Insert(0, lastStep);
+
+                robotSequence.AddSequence(newSteps);
+            }
+            else
+            {
+                robotSequence.AddSequence(newSteps);
+            }
+
+            sequenceCnt++;
+
+            steps.Clear();
+            Debug.Log("시퀀스(steps)가 저장되었습니다. 기존 steps는 초기화 되었습니다.");
+        }
+        else
+        {
+            Debug.LogWarning("저장된 Step이 없습니다.");
+        }
     }
 
     IEnumerator CoSequenceMove()
@@ -394,6 +445,58 @@ public class RobotUIManager : MonoBehaviour
         xRot = endEffector.eulerAngles.x;
         yRot = endEffector.eulerAngles.y; 
         zRot = endEffector.eulerAngles.z; 
+    }
+
+    IEnumerator CoTotalSequenceMove()
+    {
+        if (!isRobotOn)
+        {
+            Debug.LogWarning("로봇이 꺼져있습니다.");
+            yield break;
+        }
+
+        if (robotSequence.sequenceList.Count == 0)
+        {
+            Debug.LogWarning("저장된 Sequence가 없습니다.");
+            yield break;
+        }
+
+        if (isEmergency)
+        {
+            Debug.LogWarning("E-Stop 버튼이 눌렸습니다. 초기화 해주세요.");
+        }
+
+        Vector3 currentPos = endEffector.localPosition;
+        Quaternion currentRot = endEffector.localRotation;
+
+        Step currentStep = new Step() { position = currentPos, rotation = currentRot, duration = 1 };
+        Step originStep = new Step() { position = originPos, rotation = originRot, duration = 1 };
+
+        yield return CoMove(currentStep, originStep); // 원점으로 이동
+
+        robotSequence.sequenceList[0].Insert(0, originStep); // 원점이동 step을 step list의 0번째 Index에 추가
+
+        for(int i = 0; i < robotSequence.sequenceList.Count; i++)
+        {
+            for (int j = 0; j < robotSequence.sequenceList[i].Count; j++)
+            {
+                if ((j + 1) == robotSequence.sequenceList[i].Count)
+                    break;
+
+                yield return CoMove(robotSequence.sequenceList[i][j], robotSequence.sequenceList[i][j + 1]);
+            }
+        }
+
+        robotSequence.sequenceList[0].RemoveAt(0); // 원점이동 step을 step list에서 제거
+
+        isStarted = false;
+
+        x = endEffector.position.x;
+        y = endEffector.position.y;
+        z = endEffector.position.z;
+        xRot = endEffector.eulerAngles.x;
+        yRot = endEffector.eulerAngles.y;
+        zRot = endEffector.eulerAngles.z;
     }
 
     IEnumerator CoCycle()
