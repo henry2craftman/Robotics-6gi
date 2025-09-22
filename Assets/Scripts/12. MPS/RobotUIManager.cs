@@ -1,14 +1,34 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.UI;
+using static RobotUIManager;
 
 // 목표: UI에 연결된 Position, Rotation 값을 바꿔서 로봇에 적용한다.
 // 속성: OriginEndPos, OriginEndRot, 로봇전원상태, 석션상태토글
+// Step 정보 저장을 위한 기능(Step번호, 포지션, 로테이션, Duration, isSuctionOn)
 public class RobotUIManager : MonoBehaviour
 {
-    public bool isRobotOn = false;
+    [Serializable]
+    public struct Step
+    {
+        public int stepNum;
+        public Vector3 position;
+        public Quaternion rotation;
+        public float duration;
+        public bool isSuctionOn;
+    }
+    public int repeatCount = 0;
+    public List<Step> steps = new List<Step>();
+
+    public bool isRobotOn = false;    // Power
+    public bool isStarted = false;     // Start 버튼 클릭 여부
+    public bool isSequenceOn = false; // Cycle 작동 여부
+    public bool isEmergency = false;  // E-Stop 버튼 클릭 여부
+    public bool isSuctionOn = false;  // 현재 스탭의 suction 상태
 
     // EndEffector의 초기 Pos, Rot
     public Vector3 OriginEndPos;
@@ -21,6 +41,7 @@ public class RobotUIManager : MonoBehaviour
     public TMP_InputField yRotInput;
     public TMP_InputField zRotInput;
     public Toggle suctionToggle;
+    public Toggle teachByToggle;
 
     float x, y, z;
     float xRot, yRot, zRot;
@@ -40,6 +61,10 @@ public class RobotUIManager : MonoBehaviour
     bool isYRotMinusBtnDowning = false;
     bool isZRotMinusBtnDowning = false;
     public Transform endEffector;
+    int currentStep = 0;
+    public TMP_InputField durationInput;
+    Vector3 originPos;
+    Quaternion originRot;
 
     void Start()
     {
@@ -50,15 +75,21 @@ public class RobotUIManager : MonoBehaviour
         xRot = endEffector.eulerAngles.x;
         yRot = endEffector.eulerAngles.y;
         zRot = endEffector.eulerAngles.z;
+
+        durationInput.text = "1";
+
+        originPos = endEffector.localPosition;
+        originRot = endEffector.localRotation;
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (!isRobotOn)
+        if (!isRobotOn || isStarted || isSequenceOn)
             return;
 
-        UpdateEndEffector();
+        if(!teachByToggle.isOn)
+            UpdateEndEffector();
     }
 
     private void UpdateEndEffector()
@@ -265,4 +296,186 @@ public class RobotUIManager : MonoBehaviour
         isZRotMinusBtnDowning = false;
     }
 
+    public void OnTeachBtnClkEvent()
+    {
+        string durationStr = durationInput.text;
+        float _duration = 0;
+        bool isParsed = float.TryParse(durationStr, out _duration);
+
+        if (!isParsed) 
+        {
+            Debug.LogWarning("Duration 입력이 잘못되었습니다. float 형태로 넣어주세요.");
+            return;
+        }
+
+        Step step = new Step()
+        {
+            stepNum = currentStep++,
+            position = endEffector.localPosition,
+            rotation = endEffector.localRotation,
+            duration = _duration,
+            isSuctionOn = suctionToggle.isOn
+        };
+
+        steps.Add(step);
+
+        Debug.Log($"{step.stepNum}번째 Step이 저장되었습니다.");
+    }
+
+    public void OnStartBtnClkEvent()
+    {
+        isStarted = true;
+
+        StartCoroutine(CoSequenceMove());
+    }
+
+    public void OnCycleBtnClkEvent()
+    {
+        isSequenceOn = true;
+
+        StartCoroutine(CoCycle());
+    }
+
+    public void OnStopBtnClkEvent()
+    {
+        isSequenceOn = false;
+    }
+
+    public void OnEmergencyBtnClkEvent()
+    {
+        isEmergency = !isEmergency;
+        Debug.LogWarning("긴급정지버튼 클릭: " + isEmergency);
+    }
+
+    IEnumerator CoSequenceMove()
+    {
+        if (!isRobotOn)
+        {
+            Debug.LogWarning("로봇이 꺼져있습니다.");
+            yield break;
+        }
+
+        if(steps.Count == 0)
+        {
+            Debug.LogWarning("저장된 Step이 없습니다.");
+            yield break;
+        }
+
+        if(isEmergency)
+        {
+            Debug.LogWarning("E-Stop 버튼이 눌렸습니다. 초기화 해주세요.");
+        }    
+
+        Vector3    currentPos = endEffector.localPosition;
+        Quaternion currentRot = endEffector.localRotation;
+
+        Step currentStep = new Step() { position = currentPos, rotation = currentRot, duration = 1 };
+        Step originStep = new Step() { position = originPos, rotation = originRot, duration = 1 };
+
+        yield return CoMove(currentStep, originStep); // 원점으로 이동
+
+        steps.Insert(0, originStep); // 원점이동 step을 step list의 0번째 Index에 추가
+
+        for (int i = 0; i < steps.Count; i++)
+        {
+            if ((i + 1) == steps.Count)
+                break;
+
+            yield return CoMove(steps[i], steps[i + 1]);
+        }
+
+        steps.RemoveAt(0); // 원점이동 step을 step list에서 제거
+
+        isStarted = false;
+
+        x = endEffector.position.x; 
+        y = endEffector.position.y; 
+        z = endEffector.position.z; 
+        xRot = endEffector.eulerAngles.x;
+        yRot = endEffector.eulerAngles.y; 
+        zRot = endEffector.eulerAngles.z; 
+    }
+
+    IEnumerator CoCycle()
+    {
+        if (!isRobotOn)
+        {
+            Debug.LogWarning("로봇이 꺼져있습니다.");
+            yield break;
+        }
+
+        if (steps.Count == 0)
+        {
+            Debug.LogWarning("저장된 Step이 없습니다.");
+            yield break;
+        }
+
+        if (isEmergency)
+        {
+            Debug.LogWarning("E-Stop 버튼이 눌렸습니다. 초기화 해주세요.");
+        }
+
+        Vector3 currentPos = endEffector.localPosition;
+        Quaternion currentRot = endEffector.localRotation;
+
+        Step currentStep = new Step() { position = currentPos, rotation = currentRot, duration = 1 };
+        Step originStep = new Step() { position = originPos, rotation = originRot, duration = 1 };
+
+        yield return CoMove(currentStep, originStep); // 원점으로 이동
+
+        steps.Insert(0, originStep); // 원점이동 step을 step list의 0번째 Index에 추가
+
+        int repeatCount = 0;
+        while (isSequenceOn)
+        {
+            if (isEmergency)
+                break;
+
+            for (int i = 0; i < steps.Count; i++)
+            {
+                if ((i + 1) == steps.Count)
+                    break;
+
+                yield return CoMove(steps[i], steps[i + 1]);
+            }
+
+            if (repeatCount == 0)
+            {
+                steps.Remove(originStep); // 원점이동 step을 step list에서 제거
+                steps.Insert(0, steps[steps.Count - 1]);
+            }
+
+            repeatCount++;
+        }
+
+        steps.RemoveAt(0);
+        repeatCount = 0;
+
+        x = endEffector.position.x;
+        y = endEffector.position.y;
+        z = endEffector.position.z;
+        xRot = endEffector.eulerAngles.x;
+        yRot = endEffector.eulerAngles.y;
+        zRot = endEffector.eulerAngles.z;
+    }
+
+    IEnumerator CoMove(Step prevStep, Step nextStep)
+    {
+        float currentTime = 0;
+
+        while (!isEmergency)
+        {
+            currentTime += Time.deltaTime;
+
+            if (currentTime > nextStep.duration)
+                break;
+
+            endEffector.localPosition = Vector3.Lerp(prevStep.position, nextStep.position, currentTime / nextStep.duration);
+            endEffector.localRotation = Quaternion.Slerp(prevStep.rotation, nextStep.rotation, currentTime / nextStep.duration);
+
+            isSuctionOn = nextStep.isSuctionOn;
+
+            yield return new WaitForEndOfFrame();
+        }
+    }
 }
