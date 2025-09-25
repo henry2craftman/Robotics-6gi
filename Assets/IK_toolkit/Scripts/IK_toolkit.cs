@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 // IK_toolkit: UR16e 로봇 팔의 역기구학 툴킷
-[ExecuteInEditMode]
+//[ExecuteInEditMode]
 public class IK_toolkit : MonoBehaviour
 {
     public Transform ik; // IK 계산을 위한 Transform
