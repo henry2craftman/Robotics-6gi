@@ -49,7 +49,7 @@ namespace MPS
                     transform.position += dir.normalized * Conveyor.Instance.speed * Time.deltaTime;
                 }
 
-                yield return new WaitForSeconds(0.01f);
+                yield return new WaitForEndOfFrame();
             }
         }
 

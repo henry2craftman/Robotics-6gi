@@ -1,13 +1,15 @@
-using UnityEngine;
+#define Slave // 전처리기 Master or Slave 빌드시 설정
+
 using ActUtlType64Lib;
 using System;
-using System.Collections.Generic;
 using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Diagnostics;
-using Debug = UnityEngine.Debug;
 using System.Threading.Tasks;
+using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 // 목표: UI(연결, 연결해지)버튼을 누르면 실시간으로 PLC에 데이터를 요청하고, 쓴다.
 // 속성: mxComponent 객체변수, 요청하는 기능, 쓰기 기능
@@ -23,6 +25,10 @@ using System.Threading.Tasks;
 // - loader 신호(Y0E)
 public class MxComponent : MonoBehaviour
 {
+    public static MxComponent Instance; // 싱글턴패턴: 한 씬에 MxComponent 객체가 하나만 있어야함.
+
+    public object lockObj = new object();
+
     // COM참조 추가 DLL추가(STA) -> 생성된 스레드와 동일한 스레드에서만 메서드를 호출이 가능(STA: 단일 스레드 어파트먼트)
     ActUtlType64 mxComponent;
 
@@ -30,7 +36,7 @@ public class MxComponent : MonoBehaviour
     public bool isConnected = false;
     [Tooltip("에러메시지가 표시됩니다.")]
     public int iRet = 0;
-    List<bool[]> yOutput;
+    List<bool[]> yOutput = new List<bool[]>();
     public float updateInterval = 1f;
     public string xInputStartDevice = "X0";
     public int xInputBlockCount = 1;
@@ -53,15 +59,50 @@ public class MxComponent : MonoBehaviour
     Stopwatch stopwatch = new Stopwatch(); // 스탑워치 인스턴스
     StringBuilder sb = new StringBuilder(); // 문자열을 만들때 사용되는 최적화 클래스
 
+    private void Awake()
+    {
+        if(Instance == null)
+        {
+            Instance = this;
+        }
+    }
+
     public void OnOpenBtnClkEvent()
     {
         isConnected = true;
 
+        yDeviceBlocks = new int[yOutputBlockCount];
+        xDeviceBlocks = new int[xInputBlockCount];
+
+#if Master
         Task.Run(UpdatePLCDataAsync);
+
+        Task.Run(MPSwithFirebase.FirebaseDBManager.Instance.UpdatePLCDataAsync);
 
         StartCoroutine(CoShowErrMsg());
 
         Debug.Log("PLC가 연결되었습니다.");
+#elif Slave
+        Task.Run(MPSwithFirebase.FirebaseDBManager.Instance.ReadPLCDataAsync);
+
+        StartCoroutine(CoApplySignals());
+#endif
+
+
+    }
+
+    IEnumerator CoApplySignals()
+    {
+        while(isConnected)
+        {
+            Debug.Log(yDeviceBlocks);
+
+            yOutput = ConvertDecimalToBinary(yDeviceBlocks);
+
+            ApplyOutputSignals(yOutput);
+
+            yield return new WaitForEndOfFrame();
+        }
     }
 
     public void OnCloseBtnClkEvent()
@@ -89,9 +130,13 @@ public class MxComponent : MonoBehaviour
 
         while (isConnected)
         {
-            ReadDeviceBlock(mxComponent, yOutputStartDevice, yOutputBlockCount);
+            // 상호배제(Mutex) 로 공유자원에 여러 스레드가 접근하는 것을 순서화 해준다.
+            lock(lockObj)
+            {
+                ReadDeviceBlock(mxComponent, yOutputStartDevice, yOutputBlockCount);
 
-            WriteDeviceBlock(mxComponent, xInputStartDevice, xInputBlockCount);
+                WriteDeviceBlock(mxComponent, xInputStartDevice, xInputBlockCount);
+            }
 
             int interval = Convert.ToInt32(updateInterval);
             await Task.Delay(interval);
@@ -110,22 +155,23 @@ public class MxComponent : MonoBehaviour
         }
     }
 
-    private void ReadDeviceBlock(ActUtlType64 mxObject, string _yInputStartDevice, int _yInputBlockCount)
+    public int[] yDeviceBlocks;
+    private void ReadDeviceBlock(ActUtlType64 mxObject, string _yStartDevice, int _yBlockCount)
     {
         // 10진수 -> 2진수
         // { 33, 55, 500 } -> { 0011000000110000, 0011000000110000, 0011000000110000 }
-        int[] data = new int[_yInputBlockCount];
-        iRet = mxObject.ReadDeviceBlock(_yInputStartDevice, _yInputBlockCount, out data[0]);
+        
+        iRet = mxObject.ReadDeviceBlock(_yStartDevice, _yBlockCount, out yDeviceBlocks[0]);
 
         yOutput = new List<bool[]>();
-        for (int i = 0; i < data.Length; i++)
+        for (int i = 0; i < yDeviceBlocks.Length; i++)
         {
             bool[] block = new bool[16];
 
             yOutput.Add(block);
         }
 
-        yOutput = ConvertDecimalToBinary(data);
+        yOutput = ConvertDecimalToBinary(yDeviceBlocks);
 
         ApplyOutputSignals(yOutput);
     }
@@ -155,10 +201,9 @@ public class MxComponent : MonoBehaviour
         //loader.isLoadedSignal = yOutput[0][14];  // X0E 
     }
 
-    private void WriteDeviceBlock(ActUtlType64 mxObject, string _xInputStartDevice, int _xInputBlockCount)
+    public int[] xDeviceBlocks;
+    private void WriteDeviceBlock(ActUtlType64 mxObject, string _xStartDevice, int _xBlockCount)
     {
-        int[] data = new int[_xInputBlockCount];
-
         // 신호들을 10진수로 변환
         // X디바이스(input 신호, 1블록)
         // - LS 신호들(X0, X1, X2, X3, X4, X5, X6, X7)
@@ -184,9 +229,9 @@ public class MxComponent : MonoBehaviour
         // 문자열 -> int로
         // 0000 0010 -> 2
         int decimalX = Convert.ToInt32(totalBinaryStr, 2);
-        data[0] = decimalX;
+        xDeviceBlocks[0] = decimalX;
 
-        iRet = mxObject.WriteDeviceBlock(_xInputStartDevice, _xInputBlockCount, ref data[0]);
+        iRet = mxObject.WriteDeviceBlock(_xStartDevice, _xBlockCount, ref xDeviceBlocks[0]);
     }
 
 

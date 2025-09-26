@@ -5,6 +5,7 @@ using System;
 using System.Threading.Tasks;
 using TMPro;
 using System.Collections.Generic;
+using Firebase;
 
 // 목표: DB의 기본기능 CRUD를 만든다.
 // 속성: UserData 클래스, CreateUser 기능, ReadUser 기능, UpdateUserScore 기능, DeleteUser 기능
@@ -25,6 +26,8 @@ public class FirebaseDBManager : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     async void Start()
     {
+        FirebaseApp.DefaultInstance.Options.DatabaseUrl = new System.Uri(dbURL);
+
         // Database의 RootRefernece 참조하기
         reference = FirebaseDatabase.DefaultInstance.RootReference;
 
