@@ -784,7 +784,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &239873333
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1012,6 +1012,8 @@ MonoBehaviour:
   loginPanel: {fileID: 735405775}
   loginEmailInput: {fileID: 1890705707}
   loginPWInput: {fileID: 1458331952}
+  popupPanel: {fileID: 239873332}
+  popupText: {fileID: 168035692}
 --- !u!4 &292599423
 Transform:
   m_ObjectHideFlags: 0
@@ -2072,6 +2074,51 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 838576803}
   m_CullTransparentMesh: 1
+--- !u!1 &863805979
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 863805980}
+  - component: {fileID: 863805981}
+  m_Layer: 0
+  m_Name: FirebaseDBManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &863805980
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 863805979}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &863805981
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 863805979}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: babf0bfb7ed0239439fb65437f1e1a9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dbURL: https://smartfactory-19a91-default-rtdb.asia-southeast1.firebasedatabase.app/
 --- !u!1 &961739749
 GameObject:
   m_ObjectHideFlags: 0
@@ -4950,5 +4997,6 @@ SceneRoots:
   - {fileID: 961739753}
   - {fileID: 203844589}
   - {fileID: 292599423}
+  - {fileID: 863805980}
   - {fileID: 1455306195}
   - {fileID: 492687777}

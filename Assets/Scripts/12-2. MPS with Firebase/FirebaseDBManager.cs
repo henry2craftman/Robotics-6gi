@@ -1,7 +1,6 @@
 using Firebase;
 using Firebase.Database;
 using Newtonsoft.Json;
-using System.Collections;
 using System.Threading.Tasks;
 using UnityEngine;
 
