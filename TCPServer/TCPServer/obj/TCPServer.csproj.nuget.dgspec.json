@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\교수\\Documents\\6기\\TCPServer\\TCPServer\\TCPServer.csproj": {}
+    "C:\\Projects\\UnitySample\\TCPServer\\TCPServer\\TCPServer.csproj": {}
   },
   "projects": {
-    "C:\\Users\\교수\\Documents\\6기\\TCPServer\\TCPServer\\TCPServer.csproj": {
+    "C:\\Projects\\UnitySample\\TCPServer\\TCPServer\\TCPServer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\교수\\Documents\\6기\\TCPServer\\TCPServer\\TCPServer.csproj",
+        "projectUniqueName": "C:\\Projects\\UnitySample\\TCPServer\\TCPServer\\TCPServer.csproj",
         "projectName": "TCPServer",
-        "projectPath": "C:\\Users\\교수\\Documents\\6기\\TCPServer\\TCPServer\\TCPServer.csproj",
+        "projectPath": "C:\\Projects\\UnitySample\\TCPServer\\TCPServer\\TCPServer.csproj",
         "packagesPath": "C:\\Users\\교수\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\교수\\Documents\\6기\\TCPServer\\TCPServer\\obj\\",
+        "outputPath": "C:\\Projects\\UnitySample\\TCPServer\\TCPServer\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

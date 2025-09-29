@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -13,7 +13,7 @@ namespace TCPServer
         // 접속된 클라이언트 목록
         static List<TcpClient> clients = new List<TcpClient>();
 
-        static async Task Main()
+        static async Task Main2()
         {
             IPAddress ipAddress = IPAddress.Parse("192.168.10.95");
             int port = 5000;
@@ -26,7 +26,7 @@ namespace TCPServer
 
             string totalMsg = "";
 
-            while (true)
+            while (true)    
             {
                 // 2. 클라이언트 접속을 비동기적으로 대기
                 TcpClient client = await server.AcceptTcpClientAsync();
@@ -42,11 +42,11 @@ namespace TCPServer
 
                 // 3. 각 클라이언트의 스트림을 태스크로 처리
                 // * 계산이 오래 걸리는 메서는 스레드로 처리
-                HandleClientAsync(client, totalMsg);
+                HandleClientAsync(client);
             }
         }
 
-        static async void HandleClientAsync(TcpClient client, string total)
+        static async void HandleClientAsync(TcpClient client)
         {
             // 4. 데이터를 읽고 쓰기위한 클라이언트의 스트림 가져오기
             NetworkStream stream = client.GetStream();
