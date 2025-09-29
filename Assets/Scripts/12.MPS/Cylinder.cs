@@ -33,7 +33,7 @@ public class Cylinder : MonoBehaviour
 
     public bool isForwardSignal; // SOL1 : PLC로 받은 X디바이스 정보를 저장
     public bool isBackwardSignal; // SOL2
-    bool isFrontEnd = false; // 실린더가 앞쪽 끝에 있는 상태를 확인
+    public bool isFrontEnd = false; // 실린더가 앞쪽 끝에 있는 상태를 확인
 
     IEnumerator MoveForwardBySignal()
     {
@@ -48,8 +48,8 @@ public class Cylinder : MonoBehaviour
             backwardLS.material.color = originLSColor;
 
             // 미리 방향을 정의
-            Vector3 startPos = new Vector3(maxRange, 4.25f, 6.28f);
-            Vector3 endPos = new Vector3(minRange, 4.25f, 6.28f);
+            Vector3 startPos = new Vector3(0, minRange, 0);
+            Vector3 endPos = new Vector3(0, maxRange, 0);
 
             // 이동 코루틴 함수
             yield return CoMoveCylinder(startPos, endPos);
@@ -71,8 +71,8 @@ public class Cylinder : MonoBehaviour
             forwardLS.material.color = originLSColor;
 
             // 미리 방향을 정의
-            Vector3 startPos = new Vector3(maxRange, 4.25f, 6.28f);
-            Vector3 endPos = new Vector3(minRange, 4.25f, 6.28f);
+            Vector3 startPos = new Vector3(0, minRange, 0);
+            Vector3 endPos = new Vector3(0, maxRange, 0);
 
             // 이동 코루틴 함수
             yield return CoMoveCylinder(endPos, startPos);
@@ -84,8 +84,8 @@ public class Cylinder : MonoBehaviour
     // CylinderForward 버튼을 누르면 Cylinder 전진.
     public void OnCylinderForwardEvent()
     {
-        Vector3 startPos = new Vector3(maxRange, 4.25f, 6.28f);
-        Vector3 endPos = new Vector3(minRange, 4.25f, 6.28f);
+        Vector3 startPos = new Vector3(0, minRange, 0);
+        Vector3 endPos = new Vector3(0, maxRange, 0);
 
         isBackSWON = false;
 
@@ -98,8 +98,8 @@ public class Cylinder : MonoBehaviour
 
     public void OnCylinderBackwardEvent()
     {
-        Vector3 startPos = new Vector3(maxRange, 4.25f, 6.28f);
-        Vector3 endPos = new Vector3(minRange, 4.25f, 6.28f);
+        Vector3 startPos = new Vector3(0, minRange, 0);
+        Vector3 endPos = new Vector3(0, maxRange, 0);
 
         isForwardSWON = false;
 
@@ -134,6 +134,8 @@ public class Cylinder : MonoBehaviour
                     isBackSWON = true;
 
                     backwardLS.material.color = Color.green;
+
+                    isFrontEnd = false;
                 }
                     break;
             }

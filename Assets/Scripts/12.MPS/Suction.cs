@@ -3,7 +3,7 @@ using UnityEngine;
 // 목표: Robot의 현재 Step의 정보 중 isSuctionOn이 true라면 물체를 위치시킨다.
 public class Suction : MonoBehaviour
 {
-    public RobotUIManager robotUIManager;
+    public RobotUI.RobotUIManager robotUIManager;
     Rigidbody rb;
 
     // Update is called once per frame
