@@ -1,0 +1,14 @@
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\bin\Debug\net8.0\TCPClient.exe
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\bin\Debug\net8.0\TCPClient.deps.json
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\bin\Debug\net8.0\TCPClient.runtimeconfig.json
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\bin\Debug\net8.0\TCPClient.dll
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\bin\Debug\net8.0\TCPClient.pdb
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\obj\Debug\net8.0\TCPClient.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\obj\Debug\net8.0\TCPClient.AssemblyInfoInputs.cache
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\obj\Debug\net8.0\TCPClient.AssemblyInfo.cs
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\obj\Debug\net8.0\TCPClient.csproj.CoreCompileInputs.cache
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\obj\Debug\net8.0\TCPClient.dll
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\obj\Debug\net8.0\refint\TCPClient.dll
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\obj\Debug\net8.0\TCPClient.pdb
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\obj\Debug\net8.0\TCPClient.genruntimeconfig.cache
+C:\Users\교수\Documents\6기\TCPClient\TCPClient\obj\Debug\net8.0\ref\TCPClient.dll
