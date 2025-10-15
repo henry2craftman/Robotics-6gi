@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Concurrent; // ConcurrentQueue를 위해 추가
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
@@ -7,9 +7,6 @@ using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 
-/// <summary>
-/// 서버로부터 수신한 메시지를 파싱하기 위한 래퍼 클래스.
-/// </summary>
 [Serializable]
 public class NetworkMessage
 {
@@ -17,29 +14,20 @@ public class NetworkMessage
     public UserData data;
 }
 
-/// <summary>
-/// 서버와 클라이언트 간에 주고받을 데이터 구조체.
-/// JsonUtility를 통해 직렬화/역직렬화 됩니다.
-/// </summary>
 [Serializable]
 public class UserData
 {
-    public string addr; // 유저의 고유 주소 (IP:Port)
-    public Vector3 pos; // 유저의 위치
-    public Vector3 rot; // 유저의 회전
+    public string addr;
+    public Vector3 pos;
+    public Vector3 rot;
 }
 
-/// <summary>
-/// 서버와 비동기 TCP 통신을 수행하는 클라이언트 클래스.
-/// 자신의 위치/회전 정보를 서버로 보내고, 다른 클라이언트의 정보를 받아와 동기화합니다.
-/// </summary>
 public class ClientAsync : MonoBehaviour
 {
-    // --- Public Fields (Unity Inspector에서 설정) ---
     [Header("Network Settings")]
     public string serverIP = "127.0.0.1";
     public int port = 7777;
-    [Tooltip("서버로 데이터를 전송하는 주기 (초)")]
+    [Tooltip("위치 정보 전송 주기 (초)")]
     public float sendIntervalSeconds = 0.1f;
 
     [Header("Game Settings")]
@@ -48,7 +36,6 @@ public class ClientAsync : MonoBehaviour
     [Header("UI (Optional)")]
     public TMP_InputField messageInput;
 
-    // --- Private Fields ---
     private TcpClient _client;
     private NetworkStream _stream;
     private byte[] _receiveBuffer;
@@ -59,27 +46,63 @@ public class ClientAsync : MonoBehaviour
 
     private readonly ConcurrentQueue<Action> _mainThreadActions = new ConcurrentQueue<Action>();
 
-    // 메인 스레드와 네트워크 송신 스레드 간 데이터 공유를 위한 변수
     private readonly object _playerDataLock = new object();
-    private string _latestPlayerDataJson = null;
+    private string _latestUpdateMessageJson = null;
 
     #region Unity Lifecycle Methods
 
     private void Update()
     {
-        // 1. 메인 스레드에서 실행할 작업 처리 (플레이어 생성, 파괴 등)
         while (_mainThreadActions.TryDequeue(out var action))
         {
             action?.Invoke();
         }
-
-        // 2. 네트워크로 보낼 내 플레이어 데이터를 미리 준비 (메인 스레드에서만 접근)
-        PrepareDataForSending();
+        PrepareUpdateMessage();
     }
 
     private void OnDestroy()
     {
         Cleanup();
+    }
+
+    #endregion
+
+    #region Public Methods for other scripts
+
+    public void SendFireMessage(Vector3 pos, Vector3 rot)
+    {
+        try
+        {
+            string myAddr = _client.Client.LocalEndPoint.ToString();
+
+            // 1. 로컬 예측: 내 총알을 즉시 생성합니다.
+            if (BulletPoolManager.Instance != null)
+            {
+                Bullet bullet = BulletPoolManager.Instance.GetBullet(myAddr);
+                if (bullet != null)
+                {
+                    bullet.transform.position = pos;
+                    bullet.transform.rotation = Quaternion.Euler(rot);
+                }
+            }
+            else
+            {
+                Debug.LogError("BulletPoolManager.Instance가 없습니다!");
+            }
+
+            // 2. 네트워크 전송: 다른 클라이언트에게 발사 사실을 알립니다.
+            var fireData = new UserData { addr = myAddr, pos = pos, rot = rot };
+            var netMessage = new NetworkMessage { type = "fire", data = fireData };
+            string json = JsonUtility.ToJson(netMessage);
+            
+            Debug.Log($"--> [SENDER] Sending FIRE message: {json}");
+            
+            SendMessageAsync(json);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"SendFireMessage failed: {e.Message}");
+        }
     }
 
     #endregion
@@ -103,7 +126,7 @@ public class ClientAsync : MonoBehaviour
 
             _mainThreadActions.Enqueue(SpawnMyPlayer);
 
-            _ = Task.Run(SendMessageLoop);
+            _ = Task.Run(UpdateMessageLoop);
             _ = Task.Run(ReceiveDataLoop);
         }
         catch (Exception e)
@@ -116,10 +139,8 @@ public class ClientAsync : MonoBehaviour
     private void Cleanup()
     {
         if (_client == null) return;
-
         try { _stream?.Close(); } catch { /* ignore */ }
         try { _client?.Close(); } catch { /* ignore */ }
-
         _stream = null;
         _client = null;
         _mainThreadActions.Enqueue(CleanupGameObjects);
@@ -128,32 +149,24 @@ public class ClientAsync : MonoBehaviour
 
     #endregion
 
-    #region Network Communication (Background Threads)
+    #region Network Communication
 
-    private async Task SendMessageLoop()
+    private async Task UpdateMessageLoop()
     {
-        try
+        while (_client != null && _client.Connected)
         {
-            while (_client != null && _client.Connected)
+            string jsonToSend = null;
+            lock (_playerDataLock)
             {
-                string jsonToSend = null;
-                lock (_playerDataLock)
-                {
-                    jsonToSend = _latestPlayerDataJson;
-                }
-
-                if (!string.IsNullOrEmpty(jsonToSend))
-                {
-                    byte[] data = Encoding.UTF8.GetBytes(jsonToSend + '\n');
-                    await _stream.WriteAsync(data, 0, data.Length);
-                }
-
-                await Task.Delay((int)(sendIntervalSeconds * 1000));
+                jsonToSend = _latestUpdateMessageJson;
             }
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning($"메시지 전송 중 오류 발생: {e.Message}");
+
+            if (!string.IsNullOrEmpty(jsonToSend))
+            {
+                await SendMessageAsync(jsonToSend);
+            }
+
+            await Task.Delay((int)(sendIntervalSeconds * 1000));
         }
     }
 
@@ -165,93 +178,92 @@ public class ClientAsync : MonoBehaviour
             {
                 int bytesRead = await _stream.ReadAsync(_receiveBuffer, 0, _receiveBuffer.Length);
                 if (bytesRead == 0) break;
-
                 string receivedChunk = Encoding.UTF8.GetString(_receiveBuffer, 0, bytesRead);
                 _stringBuilder.Append(receivedChunk);
-
                 ProcessReceivedData();
             }
         }
-        catch (Exception e)
-        {
-            Debug.LogWarning($"데이터 수신 중 오류 발생: {e.Message}");
-        }
-        finally
-        {
-            // 수신 루프가 끝나면 연결이 끊긴 것이므로 모든 리소스를 정리합니다.
-            Cleanup();
-        }
+        catch (Exception e) { Debug.LogWarning($"데이터 수신 중 오류 발생: {e.Message}"); }
+        finally { Cleanup(); }
     }
 
     private void ProcessReceivedData()
     {
         string allData = _stringBuilder.ToString();
         int separatorIndex;
-
         while ((separatorIndex = allData.IndexOf('\n')) != -1)
         {
             string message = allData.Substring(0, separatorIndex);
             allData = allData.Substring(separatorIndex + 1);
-
-            if (!string.IsNullOrWhiteSpace(message))
-            {
-                HandleMessage(message);
-            }
+            if (!string.IsNullOrWhiteSpace(message)) HandleMessage(message);
         }
-
         _stringBuilder.Clear();
         _stringBuilder.Append(allData);
     }
 
     private void HandleMessage(string message)
     {
+        // [디버그 로그 추가]
+        Debug.Log($"<-- [RECEIVER] Received message raw: {message}");
         try
         {
             NetworkMessage netMessage = JsonUtility.FromJson<NetworkMessage>(message);
-            if (netMessage?.data == null) return;
+            
+            if (netMessage == null)
+            {
+                Debug.LogWarning("--> [RECEIVER] Message parsed to null.");
+                return;
+            }
+            
+            // [디버그 로그 추가]
+            Debug.Log($"--> [RECEIVER] Parsed message type: {netMessage.type}");
 
             switch (netMessage.type)
             {
                 case "update":
-                    // 자신의 위치 정보 업데이트는 무시합니다.
-                    if (netMessage.data.addr != null && netMessage.data.addr != _client.Client.LocalEndPoint.ToString())
-                    {
-                        _mainThreadActions.Enqueue(() => UpdateUserObject(netMessage.data));
-                    }
+                    _mainThreadActions.Enqueue(() => UpdateUserObject(netMessage.data));
                     break;
                 case "disconnect":
                     _mainThreadActions.Enqueue(() => RemoveUserObject(netMessage.data.addr));
                     break;
+                case "fire":
+                    _mainThreadActions.Enqueue(() => SpawnRemoteBullet(netMessage.data));
+                    break;
             }
         }
-        catch (Exception e)
+        catch (Exception e) { Debug.LogWarning($"메시지 처리 실패 (잘못된 형식): {message}, 오류: {e.Message}"); }
+    }
+
+    private async Task SendMessageAsync(string jsonMessage)
+    {
+        if (_client == null || !_client.Connected) return;
+        try
         {
-            Debug.LogWarning($"메시지 처리 실패 (잘못된 형식): {message}, 오류: {e.Message}");
+            byte[] data = Encoding.UTF8.GetBytes(jsonMessage + '\n');
+            await _stream.WriteAsync(data, 0, data.Length);
         }
+        catch (Exception e) { Debug.LogWarning($"메시지 전송 중 오류 발생: {e.Message}"); }
     }
 
     #endregion
 
     #region Game Logic (Main Thread)
 
-    /// <summary>
-    /// 네트워크로 전송할 데이터를 메인 스레드에서 준비합니다.
-    /// </summary>
-    private void PrepareDataForSending()
+    private void PrepareUpdateMessage()
     {
         if (_myPlayerObject != null && _client != null && _client.Connected)
         {
-            var user = new UserData
+            var userData = new UserData
             {
                 addr = _client.Client.LocalEndPoint.ToString(),
                 pos = _myPlayerObject.transform.position,
                 rot = _myPlayerObject.transform.eulerAngles
             };
-            
-            string msg = JsonUtility.ToJson(user);
+            var netMessage = new NetworkMessage { type = "update", data = userData };
+            string json = JsonUtility.ToJson(netMessage);
             lock (_playerDataLock)
             {
-                _latestPlayerDataJson = msg;
+                _latestUpdateMessageJson = json;
             }
         }
     }
@@ -259,24 +271,22 @@ public class ClientAsync : MonoBehaviour
     private void SpawnMyPlayer()
     {
         if (_myPlayerObject != null) Destroy(_myPlayerObject);
-        
         _myPlayerObject = Instantiate(playerPrefab, transform.position, transform.rotation);
-
         PlayerController controller = _myPlayerObject.GetComponent<PlayerController>();
-        if (controller != null)
-        {
-            controller.isLocalPlayer = true;
-        }
-        else
-        {
-            Debug.LogWarning("주의: playerPrefab에 PlayerController.cs 스크립트가 없습니다!");
-        }
+        if (controller != null) controller.isLocalPlayer = true;
+        else Debug.LogWarning("주의: playerPrefab에 PlayerController.cs 스크립트가 없습니다!");
+        
+        // Gun 스크립트가 ClientAsync를 찾을 수 있도록 설정
+        Gun gun = _myPlayerObject.GetComponentInChildren<Gun>();
+        if (gun != null) gun.SetClient(this);
 
         Debug.Log("내 플레이어가 생성되었습니다.");
     }
 
     private void UpdateUserObject(UserData user)
     {
+        if (user == null || user.addr == _client.Client.LocalEndPoint.ToString()) return;
+
         if (_userObjects.ContainsKey(user.addr))
         {
             GameObject existingUser = _userObjects[user.addr];
@@ -291,20 +301,11 @@ public class ClientAsync : MonoBehaviour
             newObj.transform.rotation = Quaternion.Euler(user.rot);
             _userObjects.Add(user.addr, newObj);
 
-            // --- 카메라 문제 해결을 위해 추가된 코드 ---
-            // 다른 플레이어의 캐릭터에 있는 카메라와 오디오 리스너는 비활성화합니다.
-            // 씬에는 오직 하나의 활성화된 카메라와 오디오 리스너만 있어야 하기 때문입니다.
             Camera remoteCamera = newObj.GetComponentInChildren<Camera>();
-            if (remoteCamera != null)
-            {
-                remoteCamera.gameObject.SetActive(false);
-            }
+            if (remoteCamera != null) remoteCamera.gameObject.SetActive(false);
 
             AudioListener remoteListener = newObj.GetComponentInChildren<AudioListener>();
-            if (remoteListener != null)
-            {
-                remoteListener.enabled = false;
-            }
+            if (remoteListener != null) remoteListener.enabled = false;
         }
     }
 
@@ -319,6 +320,29 @@ public class ClientAsync : MonoBehaviour
         }
     }
 
+    private void SpawnRemoteBullet(UserData fireData)
+    {
+        // 내가 쏜 총알에 대한 메시지라면 무시합니다 (이미 로컬에서 생성했기 때문).
+        if (fireData.addr == _client.Client.LocalEndPoint.ToString())
+        {
+            return;
+        }
+
+        if (BulletPoolManager.Instance == null)
+        {
+            Debug.LogError("BulletPoolManager.Instance가 없습니다!");
+            return;
+        }
+
+        // 다른 플레이어의 주소(addr)를 ID로 사용하여 해당 클라이언트의 풀에서 총알을 가져옵니다.
+        Bullet bullet = BulletPoolManager.Instance.GetBullet(fireData.addr);
+        if (bullet != null)
+        {
+            bullet.transform.position = fireData.pos;
+            bullet.transform.rotation = Quaternion.Euler(fireData.rot);
+        }
+    }
+
     private void CleanupGameObjects()
     {
         if (_myPlayerObject != null)
@@ -326,13 +350,8 @@ public class ClientAsync : MonoBehaviour
             Destroy(_myPlayerObject);
             _myPlayerObject = null;
         }
-
-        foreach (var userObject in _userObjects.Values)
-        {
-            Destroy(userObject);
-        }
+        foreach (var userObject in _userObjects.Values) Destroy(userObject);
         _userObjects.Clear();
-        
         Debug.Log("모든 플레이어 오브젝트를 정리했습니다.");
     }
 

@@ -1,117 +1,133 @@
 using UnityEngine;
+  
+  public class Gun : MonoBehaviour   
+  {
+      [Header("Required Components")]
+      public Transform bulletPos;    
+      public GameObject fireEffect;  
+      public GameObject hitEffect;
+  
+      [Header("Gun Settings")]
+      public int maxBulletNum = 10;
+      public float fireEffectDuration = 0.3f;
+  
+      [Header("Audio Clips")]
+      public AudioClip fireClip;
+      public AudioClip reloadClip;
+      public AudioClip hitClip;
+  
+      // --- Private Fields ---
+      private int bulletCnt = 0;
+      private AudioSource audio;
+  
+      // --- Network Fields ---
+      private PlayerController _playerController;
+      private ClientAsync _clientAsync;
+  
+      // --- Hit Effect Fields ---
+      public bool isHit = false;
+      public Vector3 hitPos = Vector3.zero;
+  
+      void Start()
+      {
+          audio = GetComponent<AudioSource>();
+  
+          // ë„¤íŠ¸ì›Œí¬ ë™ê¸°í™”ë¥¼ ìœ„í•´ ìƒìœ„ ê°ì²´ì—ì„œ ì»´í¬ë„ŒíŠ¸ ì°¾ê¸°
+          _playerController = GetComponentInParent<PlayerController>();
+          if (_playerController == null)
+          {
+              Debug.LogError("Gun.cs: PlayerControllerë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
+          }
+      }
+  
+      // ClientAsync ìŠ¤í¬ë¦½íŠ¸ê°€ í˜¸ì¶œí•˜ì—¬ ìì‹ ì˜ ì°¸ì¡°ë¥¼ ì „ë‹¬í•˜ëŠ” ë©”ì„œë“œ
+      public void SetClient(ClientAsync client)
+      {
+          _clientAsync = client;
+      }
+  
+      void Update()
+      {
+          // ì´ ì´ì´ 'ë‚´' í”Œë ˆì´ì–´ì˜ ê²ƒì´ ì•„ë‹ˆë©´ ì…ë ¥ ì²˜ë¦¬ ì•ˆí•¨
+          if (_playerController == null || !_playerController.isLocalPlayer)
+          {
+              return;
+          }
+  
+          // ë°œì‚¬
+          if (Input.GetMouseButtonDown(0))
+          {
+              Fire();
+          }
+          
+          // ì¬ì¥ì „
+          if (Input.GetKeyDown(KeyCode.LeftShift))
+          {
+              print("ì¬ì¥ì „!");
+              audio.clip = reloadClip;
+              audio.Play();
+              bulletCnt = 0;
+          }
+  
+          HitCheck();
+      }
+  
+      private void Fire()
+      {
+          if (bulletCnt >= maxBulletNum)
+          {
+              print("ì´ì•Œì„ ëª¨ë‘ ì†Œì§„í–ˆìŠµë‹ˆë‹¤. ì¬ì¥ì „ í•˜ì„¸ìš”.");
+              return;
+          }
 
-// ¸ñÇ¥: ¸¶¿ì½º ¿ŞÂÊ¹öÆ°À» Å¬¸¯ÇÏ¸é, bulletPos¿¡¼­ bulletÀÌ »ı¼ºµÈ´Ù.
-// ¼Ó¼º: bulletPos, bullet
-public class Gun : MonoBehaviour
-{
-    public Transform bulletPos;
-    public Bullet bulletPrefab;
-    int maxBulletNum = 10;
-    public Bullet[] bullets; // ¿ÀºêÁ§Æ®Ç®(Object Pool)
-    int bulletCnt = 0;
-    public GameObject fireEffect;
-    public float fireEffectDuration = 0.3f;
-    public GameObject hitEffect;
-    public bool isHit = false;
-    public Vector3 hitPos = Vector3.zero;
-    AudioSource audio;
-    public AudioClip fireClip;
-    public AudioClip reloadClip;
-    public AudioClip hitClip;
+          // 1. ì´í™íŠ¸ ë° ì‚¬ìš´ë“œ ì¬ìƒ
+          FireEffectON();
+          audio.clip = fireClip;
+          audio.Play();
+          Invoke(nameof(FireEffectOFF), fireEffectDuration);
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        bullets = new Bullet[maxBulletNum];
-
-        // 10°³ÀÇ BulletÀ» ¹Ì¸® ¸¸µé¾î³õ°í ¿ÀºêÁ§Æ®Ç®¿¡ ³Ö°í ²¨³õ±â
-        for (int i = 0; i < maxBulletNum; i++)
-        {
-            Bullet bullet = Instantiate(bulletPrefab);
-            bullet.gameObject.name = "Bullet";
-            bullets[i] = bullet;
-
-            bullet.gameObject.SetActive(false);
-        }
-
-        audio = GetComponent<AudioSource>();
-        audio.clip = fireClip;
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0)) // 0: ¿ŞÂÊ, 1: ÈÙ, 2: ¿À¸¥ÂÊ
-        {
-            print("Fire~!");
-
-            if (bulletPrefab != null)
-            {
-                if (bulletCnt > bullets.Length - 1)
-                {
-                    print("ÃÑ¾ËÀ» ¸ğµÎ ¼ÒÁøÇß½À´Ï´Ù. ÀçÀåÀü ÇØÁÖ¼¼¿ä.");
-
-                    return;
-                }
-
-                Bullet bullet = bullets[bulletCnt]; // Å¬·¡½º(ÂüÁ¶Å¸ÀÔ), ¹Ì¸® ÀúÀåÇØ ³õÀº bulletsÀÇ ÁÖ¼Ò¸¦ ³Ö¾îÁÜ
-                bullet.transform.position = bulletPos.position; // ÃÑ¾ËÀ» ÃÑ±¸¿¡ À§Ä¡½ÃÅ²´Ù.
-                bullet.transform.rotation = Quaternion.Euler(transform.eulerAngles.x + 90, transform.eulerAngles.y, transform.eulerAngles.z); // ÃÑ¾ËÀ» ÃÑ±¸ÀÇ È¸Àü¹æÇâÀ¸·Î È¸Àü½ÃÅ²´Ù.
-
-                bullet.gameObject.SetActive(true);
-
-                FireEffectON();
-                audio.clip = fireClip;
-                audio.Play();
-
-                Invoke("FireEffectOFF", fireEffectDuration);
-
-                bulletCnt++;
-            }
-        }
-
-        // ÀçÀåÀü
-        if (Input.GetKeyDown(KeyCode.LeftShift))
-        {
-            print("ÀåÀü¿Ï·á!");
-            audio.clip = reloadClip;
-            audio.Play();
-
-            bulletCnt = 0;
-        }
-
-        HitCheck();
-    }
-
-    private void HitCheck()
-    {
-        if (isHit)
-        {
-            hitEffect.transform.position = hitPos;
-            hitEffect.gameObject.SetActive(true);
-
-            Invoke("HitEffectOff", fireEffectDuration);
-        }
-    }
-
-    private void HitEffectOff()
-    {
-        isHit = false;
-
-        hitEffect.gameObject.SetActive(false);
-    }
-
-    private void FireEffectON()
-    {
-        fireEffect.SetActive(true);
-        fireEffect.transform.position = bulletPos.position;
-        fireEffect.transform.rotation = transform.rotation;
-    }
-
-    private void FireEffectOFF()
-    {
-        fireEffect.SetActive(false);
-    }
-
-
-}
+          bulletCnt++;
+  
+          // 2. ë„¤íŠ¸ì›Œí¬ë¡œ ë°œì‚¬ ì •ë³´ ì „ì†¡
+          if (_clientAsync != null)
+          {
+              // ì´ì•Œì˜ ìœ„ì¹˜ì™€ íšŒì „ê°’ì„ ê³„ì‚°í•©ë‹ˆë‹¤.
+              Vector3 bulletSpawnPos = bulletPos.position;
+              Quaternion bulletSpawnRot = Quaternion.Euler(transform.eulerAngles.x + 90, transform.eulerAngles.y, transform.eulerAngles.z);
+              
+              _clientAsync.SendFireMessage(bulletSpawnPos, bulletSpawnRot.eulerAngles);
+          }
+          else
+          {
+              Debug.LogWarning("Gun.cs: ClientAsync ì°¸ì¡°ê°€ ì„¤ì •ë˜ì§€ ì•Šì•„ ë„¤íŠ¸ì›Œí¬ ì „ì†¡ì„ í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
+          }
+      }
+  
+      private void HitCheck()
+      {
+          if (isHit)
+          {
+              hitEffect.transform.position = hitPos;
+              hitEffect.gameObject.SetActive(true);
+              Invoke(nameof(HitEffectOff), fireEffectDuration);
+          }
+      }
+  
+      private void HitEffectOff()
+      {
+          isHit = false;
+          hitEffect.gameObject.SetActive(false);
+      }
+  
+      private void FireEffectON()
+      {
+          fireEffect.SetActive(true);
+          fireEffect.transform.position = bulletPos.position;
+          fireEffect.transform.rotation = transform.rotation;
+      }
+  
+      private void FireEffectOFF()
+      {
+          fireEffect.SetActive(false);
+      }
+  }

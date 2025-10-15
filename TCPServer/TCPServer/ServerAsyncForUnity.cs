@@ -134,28 +134,14 @@ namespace TCPServer
 
             while ((separatorIndex = allData.IndexOf('\n')) != -1)
             {
-                string message = allData.Substring(0, separatorIndex);
+                string message = allData.Substring(0, separatorIndex + 1); // 개행문자 포함
                 allData = allData.Substring(separatorIndex + 1);
 
                 if (string.IsNullOrWhiteSpace(message)) continue;
 
-                try
-                {
-                    UserData user = JsonSerializer.Deserialize<UserData>(message, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                    if (user == null) continue;
-
-                    string output = $"[{_clientEndpoint}] Pos: {user.pos}, Rot: {user.rot}";
-                    UpdateConsoleLine(_consoleLine, output);
-
-                    var wrappedMessage = new NetworkMessage
-                    {
-                        type = "update",
-                        data = user
-                    };
-                    string wrappedJson = JsonSerializer.Serialize(wrappedMessage);
-                    _ = ServerAsyncForUnity.BroadcastMessageAsync(wrappedJson + '\n', this);
-                }
-                catch { /* ignore */ }
+                // 서버는 메시지 내용을 해석하지 않고 그대로 브로드캐스트합니다.
+                Console.WriteLine($"Relaying message from {_clientEndpoint}");
+                _ = ServerAsyncForUnity.BroadcastMessageAsync(message, this);
             }
 
             _stringBuilder.Clear();
