@@ -134,14 +134,45 @@ namespace TCPServer
 
             while ((separatorIndex = allData.IndexOf('\n')) != -1)
             {
-                string message = allData.Substring(0, separatorIndex + 1); // 개행문자 포함
+                string messageJson = allData.Substring(0, separatorIndex); // 개행문자 제외
                 allData = allData.Substring(separatorIndex + 1);
 
-                if (string.IsNullOrWhiteSpace(message)) continue;
+                if (string.IsNullOrWhiteSpace(messageJson)) continue;
 
-                // 서버는 메시지 내용을 해석하지 않고 그대로 브로드캐스트합니다.
-                Console.WriteLine($"Relaying message from {_clientEndpoint}");
-                _ = ServerAsyncForUnity.BroadcastMessageAsync(message, this);
+                try
+                {
+                    // 1. 메시지를 역직렬화하여 내용을 해석합니다.
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    NetworkMessage netMessage = JsonSerializer.Deserialize<NetworkMessage>(messageJson, options);
+
+                    if (netMessage?.data != null)
+                    {
+                        string logMessage = "";
+                        switch (netMessage.type)
+                        {
+                            case "update":
+                                logMessage = $"클라이언트 [{_clientEndpoint}]: 위치={netMessage.data.pos}, 회전={netMessage.data.rot}";
+                                break;
+                            case "fire":
+                                logMessage = $"클라이언트 [{_clientEndpoint}]: *** 총알 발사 *** 위치={netMessage.data.pos}, 회전={netMessage.data.rot}";
+                                break;
+                        }
+                        
+                        if (!string.IsNullOrEmpty(logMessage))
+                        {
+                            // 2. 해석된 정보를 바탕으로 해당 클라이언트의 전용 라인에 상태를 덮어씁니다.
+                            UpdateConsoleLine(_consoleLine, logMessage);
+                        }
+                    }
+                }
+                catch (JsonException)
+                {
+                    // JSON 파싱 실패 시, 원본 메시지를 그대로 출력 (디버깅용)
+                    UpdateConsoleLine(_consoleLine, $"[경고] 잘못된 형식의 메시지 수신: {messageJson}");
+                }
+
+                // 3. 원본 메시지를 다른 클라이언트에게 브로드캐스트합니다. (개행문자 다시 추가)
+                _ = ServerAsyncForUnity.BroadcastMessageAsync(messageJson + '\n', this);
             }
 
             _stringBuilder.Clear();
