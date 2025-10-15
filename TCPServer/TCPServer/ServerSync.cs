@@ -1,4 +1,4 @@
-﻿// 목표: 서버와 클라이언트가 동기화 되어서 통신한다.(블로킹 방식)
+// 목표: 서버와 클라이언트가 동기화 되어서 통신한다.(블로킹 방식)
 using System.Net;
 using System.Net.Sockets;
 using System.Text;

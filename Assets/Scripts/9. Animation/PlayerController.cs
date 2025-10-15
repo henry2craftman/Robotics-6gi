@@ -1,97 +1,101 @@
 using UnityEngine;
 
-// ½ºÅ©¸³Æ® Ãß°¡ ½Ã ÇÊ¿äÇÑ ÄÄÆ÷³ÍÆ®¸¦ ÀÚµ¿À¸·Î Ãß°¡ÇØÁÖ´Â ¾îÆ®¸®ºäÆ®
+namespace Animation
+{
+    
+// ï¿½ï¿½Å©ï¿½ï¿½Æ® ï¿½ß°ï¿½ ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ ï¿½ï¿½Æ®ï¿½ï¿½ï¿½ï¿½Æ®
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(Animator))]
 public class PlayerController : MonoBehaviour
 {
-    [Header("ÀÌµ¿ ¼Óµµ")]
+    [Header("ï¿½Ìµï¿½ ï¿½Óµï¿½")]
     public float walkSpeed = 3.0f;
     public float runSpeed = 6.0f;
 
-    [Header("È¸Àü ¼Óµµ")]
+    [Header("È¸ï¿½ï¿½ ï¿½Óµï¿½")]
     public float rotationSpeed = 10.0f;
 
-    [Header("Áß·Â")]
+    [Header("ï¿½ß·ï¿½")]
     public float gravity = -9.81f;
 
-    // ÁÖ¿ä ÄÄÆ÷³ÍÆ® ÂüÁ¶
+    // ï¿½Ö¿ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
     private CharacterController characterController;
     private Animator animator;
 
-    // ³»ºÎ °è»ê¿ë º¯¼ö
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     private Vector3 moveDirection;
-    private float velocityY = 0f; // yÃà(¼öÁ÷) ¼Óµµ
+    private float velocityY = 0f; // yï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½) ï¿½Óµï¿½
 
     void Start()
     {
-        // ÄÄÆ÷³ÍÆ®µéÀ» ½ÃÀÛÇÒ ¶§ ÇÑ ¹ø¸¸ °¡Á®¿Í¼­ ÀúÀå (È¿À²Àû)
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ ï¿½ï¿½ï¿½ï¿½ (È¿ï¿½ï¿½ï¿½ï¿½)
         characterController = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
     }
 
     void Update()
     {
-        // 1. »ç¿ëÀÚ ÀÔ·Â ¹Þ±â (W, A, S, D ¶Ç´Â ¹æÇâÅ°)
+        // 1. ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ô·ï¿½ ï¿½Þ±ï¿½ (W, A, S, D ï¿½Ç´ï¿½ ï¿½ï¿½ï¿½ï¿½Å°)
         float horizontalInput = Input.GetAxis("Horizontal");
         float verticalInput = Input.GetAxis("Vertical");
 
-        // ÀÔ·Â °ªÀ» ±â¹ÝÀ¸·Î ÀÌµ¿ ¹æÇâ º¤ÅÍ »ý¼º
+        // ï¿½Ô·ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         Vector3 inputDirection = new Vector3(horizontalInput, 0, verticalInput).normalized;
 
-        // 2. ´Þ¸®±â »óÅÂ È®ÀÎ (¿ÞÂÊ Shift Å°)
+        // 2. ï¿½Þ¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ Shift Å°)
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
 
-        // 3. ½ÇÁ¦ ÀÌµ¿ ¼Óµµ °áÁ¤ (°È±â ¶Ç´Â ´Þ¸®±â)
+        // 3. ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ ï¿½Óµï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½È±ï¿½ ï¿½Ç´ï¿½ ï¿½Þ¸ï¿½ï¿½ï¿½)
         float currentSpeed = isRunning ? runSpeed : walkSpeed;
 
-        // ÀÌµ¿ ÀÔ·ÂÀÌ ¾øÀ¸¸é ¼Óµµ¸¦ 0À¸·Î ¼³Á¤
+        // ï¿½Ìµï¿½ ï¿½Ô·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Óµï¿½ï¿½ï¿½ 0ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (inputDirection.magnitude < 0.1f)
         {
             currentSpeed = 0f;
         }
 
-        // 4. ÀÌµ¿ ¹× È¸Àü Ã³¸®
+        // 4. ï¿½Ìµï¿½ ï¿½ï¿½ È¸ï¿½ï¿½ Ã³ï¿½ï¿½
         if (inputDirection.magnitude >= 0.1f)
         {
-            // ¸ñÇ¥ È¸Àü°ª °è»ê
+            // ï¿½ï¿½Ç¥ È¸ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
             Quaternion targetRotation = Quaternion.LookRotation(inputDirection);
 
-            // ÇöÀç È¸Àü°ª¿¡¼­ ¸ñÇ¥ È¸Àü°ªÀ¸·Î ºÎµå·´°Ô È¸Àü (Slerp)
+            // ï¿½ï¿½ï¿½ï¿½ È¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ç¥ È¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Îµå·´ï¿½ï¿½ È¸ï¿½ï¿½ (Slerp)
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
 
-            // ÀÌµ¿ ¹æÇâ ¼³Á¤
+            // ï¿½Ìµï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             moveDirection = inputDirection * currentSpeed;
         }
         else
         {
-            // ÀÌµ¿ ÀÔ·ÂÀÌ ¾øÀ¸¸é ¼öÆò ÀÌµ¿Àº ¸ØÃã
+            // ï¿½Ìµï¿½ ï¿½Ô·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             moveDirection = Vector3.zero;
         }
 
-        // 5. Áß·Â Àû¿ë
-        // Ä³¸¯ÅÍ°¡ ¶¥¿¡ ´ê¾ÆÀÖÀ¸¸é ¼öÁ÷ ¼Óµµ ¸®¼Â
+        // 5. ï¿½ß·ï¿½ ï¿½ï¿½ï¿½ï¿½
+        // Ä³ï¿½ï¿½ï¿½Í°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Óµï¿½ ï¿½ï¿½ï¿½ï¿½
         if (characterController.isGrounded && velocityY < 0)
         {
-            velocityY = -2f; // ¶¥¿¡ ¾ÈÁ¤ÀûÀ¸·Î ºÙ¾îÀÖµµ·Ï »ìÂ¦ ¾Æ·¡·Î ÈûÀ» ÁÜ
+            velocityY = -2f; // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ù¾ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½ï¿½Â¦ ï¿½Æ·ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
         }
-        // Áß·Â °¡¼Óµµ Àû¿ë
+        // ï¿½ß·ï¿½ ï¿½ï¿½ï¿½Óµï¿½ ï¿½ï¿½ï¿½ï¿½
         velocityY += gravity * Time.deltaTime;
         moveDirection.y = velocityY;
 
-        // 6. CharacterController¸¦ ÀÌ¿ëÇØ ÃÖÁ¾ ÀÌµ¿ Àû¿ë
+        // 6. CharacterControllerï¿½ï¿½ ï¿½Ì¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ìµï¿½ ï¿½ï¿½ï¿½ï¿½
         characterController.Move(moveDirection * Time.deltaTime);
 
-        // 7. ¾Ö´Ï¸ÞÀÌÅÍ ÆÄ¶ó¹ÌÅÍ ¾÷µ¥ÀÌÆ®
-        // ¾Ö´Ï¸ÞÀÌ¼Ç »óÅÂ¸¦ °áÁ¤ÇÒ °ªÀ» °è»ê (0: ¸ØÃã, 0.5: °È±â, 1: ´Þ¸®±â)
+        // 7. ï¿½Ö´Ï¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ä¶ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ®
+        // ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½ ï¿½ï¿½ï¿½Â¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ (0: ï¿½ï¿½ï¿½ï¿½, 0.5: ï¿½È±ï¿½, 1: ï¿½Þ¸ï¿½ï¿½ï¿½)
         float animationSpeedPercent = 0f;
         if (currentSpeed > 0)
         {
             animationSpeedPercent = isRunning ? 1f : 0.5f;
         }
 
-        // AnimatorÀÇ moveSpeed ÆÄ¶ó¹ÌÅÍ¿¡ °è»êµÈ °ªÀ» Àü´Þ
-        // 0.1fÀÇ dampTimeÀ» ÁÖ¾î ¾Ö´Ï¸ÞÀÌ¼Ç ÀüÈ¯ÀÌ ºÎµå·´°Ô µÇµµ·Ï ÇÔ
+        // Animatorï¿½ï¿½ moveSpeed ï¿½Ä¶ï¿½ï¿½ï¿½Í¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+        // 0.1fï¿½ï¿½ dampTimeï¿½ï¿½ ï¿½Ö¾ï¿½ ï¿½Ö´Ï¸ï¿½ï¿½Ì¼ï¿½ ï¿½ï¿½È¯ï¿½ï¿½ ï¿½Îµå·´ï¿½ï¿½ ï¿½Çµï¿½ï¿½ï¿½ ï¿½ï¿½
         animator.SetFloat("moveSpeed", animationSpeedPercent, 0.1f, Time.deltaTime);
     }
+}
 }

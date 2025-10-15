@@ -15,7 +15,7 @@ namespace TCPServer
 
         static async Task Main2()
         {
-            IPAddress ipAddress = IPAddress.Parse("192.168.10.95");
+            IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
             int port = 5000;
 
             // 1. 서버 작동
@@ -23,8 +23,6 @@ namespace TCPServer
             server.Start();
             Console.WriteLine($"비동기 서버가 {port}에서 시작되었습니다. " +
                 $"클라이언트 접속 대기중...");
-
-            string totalMsg = "";
 
             while (true)    
             {
@@ -69,9 +67,9 @@ namespace TCPServer
 
 
                     // 7. 받은 데이터에 따라 결과를 전달해줌
-                    //byte[] answer = Encoding.UTF8.GetBytes($"{data} from Server");
-                    //await stream.WriteAsync(answer, 0, answer.Length);
-                    //Console.WriteLine($"송신: {data}");
+                    byte[] answer = Encoding.UTF8.GetBytes($"{data} from Server");
+                    await stream.WriteAsync(answer, 0, answer.Length);
+                    Console.WriteLine($"송신: {data}");
 
                     // 받은 메시지를 모든 클라이언트에게 전달해줌.
                     string newData = $"{client.Client.RemoteEndPoint}: {data}\n";

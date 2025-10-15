@@ -1,4 +1,4 @@
-﻿// 목표: 서버에 접속, 데이터를 보내고 받는다.
+// 목표: 서버에 접속, 데이터를 보내고 받는다.
 using System.Net.Sockets;
 using System.Text;
 
@@ -6,7 +6,7 @@ class Program
 {
     static async Task Main()
     {
-        string serverIP = "192.168.10.95";
+        string serverIP = "127.0.0.1";
         int port = 5000;
 
         // 1. 서버에 접속(서버가 켜져 있다면)
@@ -34,10 +34,10 @@ class Program
             Console.WriteLine($"송신: {msg}");
 
             // 5. 서버로부터 에코 메시지 수신
-            //byte[] buffer = new byte[1024];
-            //int bytesRead = stream.Read(buffer, 0, buffer.Length);
-            //string responseFromServer = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-            //Console.WriteLine($"수신: {responseFromServer}");
+            byte[] buffer = new byte[1024];
+            int bytesRead = stream.Read(buffer, 0, buffer.Length);
+            string responseFromServer = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+            Console.WriteLine($"수신: {responseFromServer}");
         }
 
         stream.Close();

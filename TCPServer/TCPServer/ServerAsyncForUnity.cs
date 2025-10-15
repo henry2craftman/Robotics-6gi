@@ -1,94 +1,197 @@
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace TCPServer
 {
+    // 클라이언트와 동일한 데이터 구조를 서버에도 정의합니다.
+    public class UserData
+    {
+        public string addr { get; set; }
+        public Vector3 pos { get; set; }
+        public Vector3 rot { get; set; }
+    }
+
+    public class Vector3
+    {
+        public float x { get; set; }
+        public float y { get; set; }
+        public float z { get; set; }
+        public override string ToString() => $"({x:F1}, {y:F1}, {z:F1})";
+    }
+
     internal class ServerAsyncForUnity
     {
-        static List<TcpClient> clients = new List<TcpClient>();
+        private static readonly ConcurrentBag<ClientHandler> _clients = new ConcurrentBag<ClientHandler>();
+        // --- 콘솔 출력 관리를 위한 정적 변수 ---
+        private static int _nextConsoleLine = 1; // 0번 줄은 서버 시작 메시지를 위해 비워둠
+        internal static readonly object _consoleLock = new object(); // 콘솔 동시 접근 방지용 락
 
         static async Task Main(string[] args)
         {
-            IPAddress ip = IPAddress.Parse("192.168.10.95");
-            TcpListener server = new TcpListener(ip, 7777);
-            server.Start();
-            Console.WriteLine("비동기 서버가 시작되었습니다. 클라이언트 접속 대기 중...");
-
-            while (true)
+            TcpListener server = new TcpListener(IPAddress.Any, 7777);
+            try
             {
-                // 클라이언트 접속을 비동기적으로 대기
-                TcpClient client = await server.AcceptTcpClientAsync();
-                Console.WriteLine("클라이언트 접속!");
+                server.Start();
+                Console.WriteLine("[서버] 비동기 서버가 시작되었습니다. 클라이언트 접속 대기 중...");
 
-                clients.Add(client);
-
-                await BroadcastMessageAsync($"사용자 {clients.Count - 1}({client.Client.RemoteEndPoint}) 입장!", client);
-
-                // 각 클라이언트를 별도의 태스크로 처리
-                _ = HandleClientAsync(client);
+                while (true)
+                {
+                    TcpClient client = await server.AcceptTcpClientAsync();
+                    
+                    lock (_consoleLock)
+                    {
+                        // 새로운 클라이언트를 위한 핸들러 생성 및 시작 (콘솔 라인 번호 할당)
+                        var clientHandler = new ClientHandler(client, _nextConsoleLine++);
+                        _clients.Add(clientHandler);
+                        _ = clientHandler.RunAsync();
+                    }
+                }
+            }
+            finally
+            {
+                server.Stop();
             }
         }
 
-        static async Task HandleClientAsync(TcpClient client)
+        public static async Task BroadcastMessageAsync(string message, ClientHandler sender)
         {
-            NetworkStream stream = client.GetStream();
-            byte[] buffer = new byte[1024];
+            foreach (var client in _clients)
+            {
+                if (client == sender) continue;
+                await client.SendMessageAsync(message);
+            }
+        }
+        
+        public static void RemoveClient(ClientHandler clientHandler) { /* No-op for ConcurrentBag */ }
+    }
 
+    internal class ClientHandler
+    {
+        private readonly TcpClient _client;
+        private readonly NetworkStream _stream;
+        private readonly byte[] _receiveBuffer = new byte[4096];
+        private readonly StringBuilder _stringBuilder = new StringBuilder();
+        private readonly int _consoleLine;
+        private readonly string _clientEndpoint;
+
+        // NetworkMessage 클래스를 서버에도 추가
+        public class NetworkMessage
+        {
+            public string type { get; set; }
+            public UserData data { get; set; }
+        }
+
+        public ClientHandler(TcpClient client, int consoleLine)
+        {
+            _client = client;
+            _stream = client.GetStream();
+            _consoleLine = consoleLine;
+            _clientEndpoint = client.Client.RemoteEndPoint.ToString();
+        }
+
+        public async Task RunAsync()
+        {
             try
             {
                 while (true)
                 {
-                    // 데이터 수신을 비동기적으로 대기
-                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                    if (bytesRead == 0) break; // 클라이언트가 연결을 끊음
+                    int bytesRead = await _stream.ReadAsync(_receiveBuffer, 0, _receiveBuffer.Length);
+                    if (bytesRead == 0) break;
 
-                    string data = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                    Console.WriteLine($"수신: {data}");
+                    string receivedChunk = Encoding.UTF8.GetString(_receiveBuffer, 0, bytesRead);
+                    _stringBuilder.Append(receivedChunk);
 
-                    // 에코 메시지를 비동기적으로 전송
-                    //byte[] msg = Encoding.UTF8.GetBytes(data);
-                    //await stream.WriteAsync(msg, 0, msg.Length);
-                    //Console.WriteLine($"송신: {data}");
-
-                    await BroadcastMessageAsync(data, client);
+                    ProcessReceivedData();
                 }
             }
-            catch (Exception e)
-            {
-                Console.WriteLine($"클라이언트 처리 중 오류: {e.Message}");
-            }
+            catch { /* ignore */ }
             finally
             {
-                // 클라이언트가 방에서 나감
-                await BroadcastMessageAsync($"사용자{clients.IndexOf(client)}가 방에서 나갔습니다.", client);
-                clients.Remove(client);
+                var disconnectMessage = new NetworkMessage
+                {
+                    type = "disconnect",
+                    data = new UserData { addr = _clientEndpoint }
+                };
+                string disconnectJson = JsonSerializer.Serialize(disconnectMessage);
+                await ServerAsyncForUnity.BroadcastMessageAsync(disconnectJson + '\n', this);
+                
+                ClearConsoleLine(_consoleLine, $"클라이언트 접속 종료: {_clientEndpoint}");
 
-                stream.Close();
-                client.Close();
-                Console.WriteLine("클라이언트 연결 종료.");
+                ServerAsyncForUnity.RemoveClient(this);
+                _client.Close();
             }
         }
 
-        // 접속한 모든 클라이언트에게 메시지를 보내는 메서드
-        static async Task BroadcastMessageAsync(string msg, TcpClient sender)
+        private void ProcessReceivedData()
         {
-            byte[] messageBytes = Encoding.UTF8.GetBytes(msg);
+            string allData = _stringBuilder.ToString();
+            int separatorIndex;
 
-            // 클라이언트 목록을 순회하며 메시지 보내기
-            foreach (var client in clients)
+            while ((separatorIndex = allData.IndexOf('\n')) != -1)
             {
-                if (client == sender)
-                    continue;
+                string message = allData.Substring(0, separatorIndex);
+                allData = allData.Substring(separatorIndex + 1);
 
-                // 목록의 클라이언트가 연결된 상태라면
-                if (client.Connected)
+                if (string.IsNullOrWhiteSpace(message)) continue;
+
+                try
                 {
-                    await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length);
+                    UserData user = JsonSerializer.Deserialize<UserData>(message, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (user == null) continue;
+
+                    string output = $"[{_clientEndpoint}] Pos: {user.pos}, Rot: {user.rot}";
+                    UpdateConsoleLine(_consoleLine, output);
+
+                    var wrappedMessage = new NetworkMessage
+                    {
+                        type = "update",
+                        data = user
+                    };
+                    string wrappedJson = JsonSerializer.Serialize(wrappedMessage);
+                    _ = ServerAsyncForUnity.BroadcastMessageAsync(wrappedJson + '\n', this);
                 }
+                catch { /* ignore */ }
             }
+
+            _stringBuilder.Clear();
+            _stringBuilder.Append(allData);
+        }
+
+        private static void UpdateConsoleLine(int line, string text)
+        {
+            lock (ServerAsyncForUnity._consoleLock)
+            {
+                Console.SetCursorPosition(0, line);
+                Console.Write(text + new string(' ', Console.WindowWidth - text.Length - 1));
+            }
+        }
+
+        private static void ClearConsoleLine(int line, string message)
+        {
+            lock (ServerAsyncForUnity._consoleLock)
+            {
+                Console.SetCursorPosition(0, line);
+                Console.Write(new string(' ', Console.WindowWidth - 1));
+                Console.SetCursorPosition(0, line);
+                Console.WriteLine(message);
+            }
+        }
+
+        public async Task SendMessageAsync(string message)
+        {
+            if (!_client.Connected) return;
+            try
+            {
+                byte[] messageBytes = Encoding.UTF8.GetBytes(message);
+                await _stream.WriteAsync(messageBytes, 0, messageBytes.Length);
+            }
+            catch { /* ignore */ }
         }
     }
 }
+
