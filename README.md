@@ -1,41 +1,91 @@
-# UnitySample
-유니티 공부를 위한 리파지토리 입니다.
+# Unity 학습 및 데모 프로젝트 Readme
 
+## 📖 개요
 
-# Check
-- LargeFiles 폴더는 GoogleDrive에
-- Floor_01.fbx 파일은 OOScene의 바닥에 적용
+이 프로젝트는 Unity 엔진의 다양한 핵심 기능과 고급 주제를 학습하고 시연하기 위해 제작된 데모 및 스터디 프로젝트 모음입니다. 물리 시뮬레이션, 애니메이션, UI, 비동기 프로그래밍, 그리고 Firebase 연동에 이르기까지 Unity 개발에 필요한 광범위한 주제들을 각 씬(Scene)별로 구현하고 있습니다.
 
-## `ClientAsync.cs` Refactoring (2025-10-13)
+각 씬은 특정 개념이나 기능을 집중적으로 다루며, 해당 씬의 로직은 `Scripts` 폴더 내의 관련 스크립트 파일에 구현되어 있습니다. 이 프로젝트는 Unity 개발자들이 특정 기능을 이해하고 자신의 프로젝트에 적용하는 데 참고 자료로 활용될 수 있습니다.
 
-`Assets/Scripts/17. ClientAsync/ClientAsync.cs` 스크립트의 안정성과 가독성을 개선했습니다.
+## ✨ 주요 학습 및 데모 주제
 
-### 주요 변경 사항
+이 프로젝트는 다음을 포함한 다양한 Unity 개발 주제를 다룹니다:
 
-- **안정적인 메시지 처리**: TCP 스트림에서 발생할 수 있는 메시지 분할 및 병합 문제를 해결했습니다. 개행 문자(`
-`)를 기준으로 메시지를 파싱하여 어떤 상황에서든 데이터를 정확하게 처리하도록 수정했습니다.
-- **오류 처리 강화**: 네트워크 오류, 데이터 형식 오류(예: 잘못된 JSON)가 발생했을 때 프로그램이 비정상적으로 종료되지 않도록 `try-catch` 구문을 강화했습니다.
-- **코드 구조 개선**:
-    - 불필요한 `using` 문을 제거했습니다.
-    - 로직을 명확한 목적을 가진 여러 메서드(`SendMessageLoop`, `ReceiveDataLoop`, `ProcessReceivedData`, `HandleMessage`)로 분리했습니다.
-    - 코드의 의도를 파악하기 쉽도록 주석을 추가하고 변수명을 명확하게 변경했습니다.
-- **메인 스레드 처리 경고 추가**: Unity API(오브젝트 생성, `transform` 조작 등)는 메인 스레드에서만 호출해야 합니다. 네트워크 스레드에서 직접 호출하는 위험한 부분에 대해 경고 주석을 추가하고, 실제 프로젝트에서 권장되는 해결책(`MainThreadDispatcher` 패턴)을 제시했습니다.
+*   **기본 조작 및 물리**:
+    *   `1. FloorPlan_MovementStudy.unity`: 씬 내에서의 오브젝트 이동 및 조작 연구.
+    *   `2. RotationStudy.unity`: 오브젝트 회전 및 방향 제어 연구.
+    *   `4. PhysicsStudy.unity`: Unity 물리 엔진의 기본 동작 및 상호작용 연구.
+    *   `5. Pinball.unity`: 핀볼 게임 구현을 통한 복합적인 물리 시뮬레이션 데모. (`PinballManager.cs`, `Ball.cs`, `GameoverLine.cs` 등)
+    *   `7. Conveyor.unity`: 컨베이어 벨트와 같은 이동 메커니즘 구현 및 물리적 상호작용. (`7. Conveyor` 스크립트 폴더)
+    *   `8. Raycast.unity`: 레이캐스트를 활용한 오브젝트 감지 및 상호작용. (`8. Raycast` 스크립트 폴더)
+*   **애니메이션**:
+    *   `9. Animation.unity`: Unity 애니메이션 시스템의 기본 사용법 및 컨트롤러. (`9. Animation` 스크립트 폴더)
+    *   `11. AnimStudy.unity`: 캐릭터 애니메이션 및 IK 툴킷 활용 연구.
+*   **UI 및 이펙트**:
+    *   `6. UIStudy.unity`: Unity UI 시스템을 활용한 사용자 인터페이스 구현. (`UIManager.cs`)
+    *   `10. Particle.unity`: 파티클 시스템을 활용한 시각 효과 구현.
+*   **고급 프로그래밍**:
+    *   `13. AsyncProgramming.unity`: 비동기 프로그래밍 패턴 (async/await) 연구. (`13. AsyncProgramming` 스크립트 폴더)
+    *   `14. Serialization.unity`: JSON 직렬화를 포함한 데이터 저장 및 로드 기법. (`JsonSerializationManager.cs`)
+    *   `17.ClientAsync.unity`: 클라이언트 측 비동기 통신 및 처리. (`17. ClientAsync` 스크립트 폴더)
+*   **Firebase 연동**:
+    *   `15. Firebase Realtime Database.unity`: Firebase Realtime Database를 활용한 데이터 저장 및 동기화. (`15. Firebase Realtime Database` 스크립트 폴더)
+    *   `16. Firebase Authentication.unity`: Firebase Authentication을 활용한 사용자 인증 시스템. (`16. Firebase Authentication` 스크립트 폴더)
+    *   `12-2. MPS with Firebase.unity`: Firebase와 연동된 다목적 시스템(MPS) 데모. (`12-2. MPS with Firebase` 스크립트 폴더)
+*   **기타 시스템**:
+    *   `12. MPS.unity`: 다목적 시스템(MPS)의 기본 구현. (`12. MPS` 스크립트 폴더)
+    *   `12-1. MPS with Robot 1.unity`: 로봇과 연동된 MPS 데모.
+    *   `18. RobotTeacher.unity`: 로봇을 활용한 교육 또는 시뮬레이션 데모.
 
-## `8. Raycast Scene` 기능 설명 (2025-10-13)
+## 🛠️ 사용된 기술 및 에셋
 
-`Assets/Scenes/`에 위치한 `8. Raycast Scene`의 주요 기능은 다음과 같습니다. 이 씬은 `Assets/Scripts/8. Raycast/RaycastStudy.cs` 스크립트를 통해 제어됩니다.
+### 핵심 기술
+*   **게임 엔진**: Unity 202x.x.x
+*   **백엔드 서비스**: Google Firebase (Realtime Database, Authentication)
+*   **입력 시스템**: Unity Input System
+*   **애니메이션**: Unity Animation, IK Toolkit
+*   **데이터 처리**: JSON 직렬화
 
-### 주요 기능
+### 주요 에셋
+*   **캐릭터**: unity-chan!, AnimeGirls, NekoLegends, GhostCharacter_Free
+*   **환경**: SimplePoly City - Low Poly Assets
+*   **가구 및 소품**: FurnishedCabin, MinimalistBedroom, NextGen Furniture Pack, RawWoodenFurnitureFree
+*   **무기/사운드**: IronSpear Content, Weapons of Choice FREE - Komposite Sound
+*   **기타**: Phoenix3D, Floor materials pack
 
-- **전방 물체 감지**:
-    - 스크립트가 적용된 게임 오브젝트가 자신의 정면으로 광선(Ray)을 발사하여 전방의 물체를 감지합니다.
-    - 물체가 감지되면 콘솔에 해당 물체의 이름이 출력됩니다.
+## ⚙️ 설치 및 실행 방법
 
-- **마우스를 이용한 물체 상호작용**:
-    - `"GrabableObject"` 태그가 지정된 물체를 마우스 왼쪽 버튼으로 클릭하여 잡을 수 있습니다.
-    - 물체를 잡고 있는 동안에는 중력이 비활성화되며, 마우스를 드래그하여 화면상에서 물체를 자유롭게 이동시킬 수 있습니다.
-    - 마우스 버튼에서 손을 떼면 물체를 놓게 되며, 해당 물체는 다시 중력의 영향을 받습니다.
+1.  **프로젝트 클론**: 이 Git 저장소를 로컬 컴퓨터에 클론합니다.
+2.  **Unity Hub에서 열기**: Unity Hub를 열고 'Add' 버튼을 클릭하여 클론한 프로젝트 폴더를 선택합니다.
+    *   프로젝트에 맞는 Unity 에디터 버전이 설치되어 있어야 합니다. (권장 버전: `202x.x.x` - 프로젝트에 맞는 버전으로 수정해주세요)
+3.  **Firebase 설정 (Firebase 관련 씬을 실행할 경우)**:
+    *   Firebase 콘솔에서 새 프로젝트를 생성하거나 기존 프로젝트에 연결합니다.
+    *   Android/iOS 앱을 추가하고 `google-services.json` 및 `GoogleService-Info.plist` 파일을 다운로드합니다.
+    *   다운로드한 설정 파일을 `Assets` 폴더 내에配置합니다. (현재 `google-services.json` 파일이 존재합니다.)
+    *   **중요**: Firebase 관련 SDK 및 External Dependency Manager가 패키지를 올바르게 가져왔는지 확인합니다.
+4.  **프로젝트 실행**:
+    *   Unity 에디터에서 `Assets/Scenes` 폴더에 있는 원하는 씬 파일을 엽니다.
+    *   Play 버튼을 눌러 해당 씬의 데모를 실행합니다.
 
-이 씬은 Unity의 `Physics.Raycast`를 사용하여 특정 방향의 물체를 감지하고, 카메라와 마우스 입력을 조합하여 동적인 상호작용을 구현하는 방법을 학습하기 위한 예제입니다.
+## 🕹️ 조작 방법
 
-```
+본 프로젝트는 Unity의 신규 입력 시스템을 사용합니다. 조작키는 `Assets/InputSystem_Actions.inputactions` 파일에서 확인 및 수정할 수 있습니다. 각 씬에 따라 필요한 조작이 다를 수 있습니다.
+
+*   **일반적인 이동**: `W`, `A`, `S`, `D`
+*   **점프**: `Space`
+*   **카메라 회전**: `마우스` 이동
+*   **상호작용**: `E` 또는 `F` (각 씬의 구현에 따라 다름)
+
+## 📝 크레딧
+
+본 프로젝트는 아래와 같은 다양한 에셋 스토어의 자료를 활용하여 제작되었습니다. 훌륭한 에셋을 제공해주신 모든 제작자분들께 감사드립니다.
+
+*   unity-chan!: © Unity Technologies Japan/UCL
+*   SimplePoly City - Low Poly Assets
+*   FurnishedCabin
+*   MinimalistBedroom
+*   NextGen Furniture Pack
+*   RawWoodenFurnitureFree
+*   IronSpear Content
+*   Weapons of Choice FREE - Komposite Sound
+*   GhostCharacter_Free
+*   ... (기타 `DownloadedAssets` 폴더 내 에셋)
