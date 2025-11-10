@@ -2,15 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
-using static RobotUIManager;
-
 // 목표: UI에 연결된 Position, Rotation 값을 바꿔서 로봇에 적용한다.
 // 속성: OriginEndPos, OriginEndRot, 로봇전원상태, 석션상태토글
 // Step 정보 저장을 위한 기능(Step번호, 포지션, 로테이션, Duration, isSuctionOn)
+[ExecuteInEditMode]
 public class RobotUIManager : MonoBehaviour
 {
     [Serializable]
@@ -102,7 +99,7 @@ public class RobotUIManager : MonoBehaviour
         if (!isRobotOn || isStarted || isSequenceOn)
             return;
 
-        if(!teachByToggle.isOn)
+        if (!teachByToggle.isOn)
             UpdateEndEffector();
     }
 
@@ -316,7 +313,7 @@ public class RobotUIManager : MonoBehaviour
         float _duration = 0;
         bool isParsed = float.TryParse(durationStr, out _duration);
 
-        if (!isParsed) 
+        if (!isParsed)
         {
             Debug.LogWarning("Duration 입력이 잘못되었습니다. float 형태로 넣어주세요.");
             return;
@@ -374,7 +371,7 @@ public class RobotUIManager : MonoBehaviour
         {
             List<Step> newSteps = new List<Step>(steps);
 
-            if(sequenceCnt > 0)
+            if (sequenceCnt > 0)
             {
                 List<Step> prevSeq = robotSequence.sequenceList[sequenceCnt - 1];
                 Step lastStep = prevSeq[prevSeq.Count - 1];
@@ -406,18 +403,18 @@ public class RobotUIManager : MonoBehaviour
             yield break;
         }
 
-        if(steps.Count == 0)
+        if (steps.Count == 0)
         {
             Debug.LogWarning("저장된 Step이 없습니다.");
             yield break;
         }
 
-        if(isEmergency)
+        if (isEmergency)
         {
             Debug.LogWarning("E-Stop 버튼이 눌렸습니다. 초기화 해주세요.");
-        }    
+        }
 
-        Vector3    currentPos = endEffector.localPosition;
+        Vector3 currentPos = endEffector.localPosition;
         Quaternion currentRot = endEffector.localRotation;
 
         Step currentStep = new Step() { position = currentPos, rotation = currentRot, duration = 1 };
@@ -439,12 +436,12 @@ public class RobotUIManager : MonoBehaviour
 
         isStarted = false;
 
-        x = endEffector.position.x; 
-        y = endEffector.position.y; 
-        z = endEffector.position.z; 
+        x = endEffector.position.x;
+        y = endEffector.position.y;
+        z = endEffector.position.z;
         xRot = endEffector.eulerAngles.x;
-        yRot = endEffector.eulerAngles.y; 
-        zRot = endEffector.eulerAngles.z; 
+        yRot = endEffector.eulerAngles.y;
+        zRot = endEffector.eulerAngles.z;
     }
 
     IEnumerator CoTotalSequenceMove()
@@ -476,7 +473,7 @@ public class RobotUIManager : MonoBehaviour
 
         robotSequence.sequenceList[0].Insert(0, originStep); // 원점이동 step을 step list의 0번째 Index에 추가
 
-        for(int i = 0; i < robotSequence.sequenceList.Count; i++)
+        for (int i = 0; i < robotSequence.sequenceList.Count; i++)
         {
             for (int j = 0; j < robotSequence.sequenceList[i].Count; j++)
             {
